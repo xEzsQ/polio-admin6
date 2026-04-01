@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Polio — Admin</title>
+<link rel="icon" type="image/x-icon" href="/favicon.ico?v=2">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=2">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=2">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=2">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0c0e12;--surface:#13161c;--surface2:#1a1e27;--border:#252a36;
+  --gold:#c8a96e;--gold-light:#e2c98a;--gold-dim:rgba(200,169,110,.12);
+  --text:#e8e4dc;--muted:#6b7280;--danger:#e05555;--success:#4eca8b;
+  --ban:#f97316;--ban-dim:rgba(249,115,22,.12);
+  --purple:#8b5cf6;--purple-dim:rgba(139,92,246,.12);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:radial-gradient(ellipse 80% 60% at 15% 0%,rgba(200,169,110,.05) 0%,transparent 60%),
+             radial-gradient(ellipse 60% 40% at 85% 100%,rgba(139,92,246,.04) 0%,transparent 60%);}
+.layout{display:flex;min-height:100vh;position:relative;z-index:1;}
+.sidebar{width:268px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:32px 0;position:sticky;top:0;height:100vh;flex-shrink:0;}
+.logo{padding:0 28px 28px;border-bottom:1px solid var(--border);}
+.logo-title{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:var(--gold);}
+.logo-sub{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:.15em;text-transform:uppercase;margin-top:3px;}
+.nav{padding:20px 16px;flex:1;}
+.nav-item{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:8px;cursor:pointer;font-size:14px;color:var(--muted);transition:all .2s;margin-bottom:2px;user-select:none;}
+.nav-item:hover{background:var(--surface2);color:var(--text);}
+.nav-item.active{background:var(--gold-dim);color:var(--gold);}
+.nav-icon{font-size:16px;width:20px;text-align:center;}
+.sidebar-stats{margin:16px;padding:16px;background:var(--surface2);border-radius:10px;border:1px solid var(--border);}
+.ss-label{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;margin-bottom:10px;}
+.ss-row{display:flex;justify-content:space-between;margin-bottom:7px;font-size:13px;}
+.ss-row:last-child{margin-bottom:0;}
+.ss-val{font-family:'DM Mono',monospace;color:var(--gold);}
+.main{flex:1;padding:40px 48px;overflow-y:auto;}
+.page-title{font-family:'Playfair Display',serif;font-size:34px;font-weight:900;line-height:1.1;margin-bottom:6px;}
+.page-title span{color:var(--gold);}
+.page-sub{font-size:14px;color:var(--muted);margin-bottom:36px;}
+.btn{padding:10px 20px;border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;font-weight:500;cursor:pointer;border:none;transition:all .2s;display:inline-flex;align-items:center;gap:8px;}
+.btn-gold{background:var(--gold);color:#0c0e12;}
+.btn-gold:hover{background:var(--gold-light);transform:translateY(-1px);box-shadow:0 4px 20px rgba(200,169,110,.3);}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border);}
+.btn-ghost:hover{background:var(--surface2);color:var(--text);}
+.btn-danger{background:rgba(224,85,85,.15);color:var(--danger);border:1px solid rgba(224,85,85,.3);}
+.btn-danger:hover{background:rgba(224,85,85,.25);}
+.btn-ban{background:var(--ban-dim);color:var(--ban);border:1px solid rgba(249,115,22,.3);}
+.btn-ban:hover{background:rgba(249,115,22,.25);}
+.btn-unban{background:rgba(78,202,139,.15);color:var(--success);border:1px solid rgba(78,202,139,.3);}
+.btn-unban:hover{background:rgba(78,202,139,.25);}
+.btn-sm{padding:6px 12px;font-size:12px;}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:32px;}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px;}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;position:relative;overflow:hidden;transition:border-color .2s;}
+.stat-card:hover{border-color:rgba(200,169,110,.3);}
+.stat-card::before{content:attr(data-icon);position:absolute;right:18px;top:16px;font-size:26px;opacity:.12;}
+.stat-lbl{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin-bottom:8px;}
+.stat-num{font-family:'Playfair Display',serif;font-size:36px;font-weight:700;color:var(--gold);line-height:1;}
+.stat-desc{font-size:12px;color:var(--muted);margin-top:7px;}
+.tbl-wrap{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:28px;}
+.tbl-head{padding:18px 22px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;}
+.tbl-title{font-family:'Playfair Display',serif;font-size:18px;font-weight:700;}
+.tbl-sub{font-size:12px;color:var(--muted);margin-top:2px;}
+table{width:100%;border-collapse:collapse;}
+thead th{padding:10px 20px;text-align:left;font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);border-bottom:1px solid var(--border);font-weight:400;}
+tbody tr{transition:background .15s;}
+tbody tr:hover{background:var(--surface2);}
+tbody td{padding:13px 20px;font-size:14px;border-bottom:1px solid rgba(37,42,54,.5);}
+tbody tr:last-child td{border-bottom:none;}
+.banned-row{opacity:.5;}
+.credit-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-family:'DM Mono',monospace;font-size:12px;font-weight:500;}
+.ch{background:rgba(78,202,139,.12);color:var(--success);}
+.cm{background:rgba(200,169,110,.12);color:var(--gold);}
+.cl{background:rgba(224,85,85,.12);color:var(--danger);}
+.ban-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;font-size:10px;font-family:'DM Mono',monospace;background:var(--ban-dim);color:var(--ban);margin-left:8px;vertical-align:middle;text-transform:uppercase;letter-spacing:.08em;}
+.actions{display:flex;gap:5px;flex-wrap:wrap;}
+.book-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;transition:all .25s;}
+.book-card:hover{border-color:rgba(200,169,110,.4);transform:translateY(-2px);}
+.bc-icon{font-size:30px;margin-bottom:10px;}
+.bc-title{font-family:'Playfair Display',serif;font-size:15px;font-weight:700;margin-bottom:3px;line-height:1.3;}
+.bc-author{font-size:11px;color:var(--muted);margin-bottom:6px;font-style:italic;}
+.bc-desc{font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.bc-meta{display:flex;align-items:center;gap:8px;margin-bottom:12px;}
+.bc-credits{font-family:'DM Mono',monospace;font-size:22px;color:var(--gold);font-weight:500;}
+.bc-credits span{font-size:12px;color:var(--muted);}
+.bc-color-dot{width:10px;height:10px;border-radius:50%;display:inline-block;flex-shrink:0;}
+.bc-actions{display:flex;gap:8px;}
+.agenda-toolbar{display:flex;align-items:center;gap:12px;margin-bottom:24px;flex-wrap:wrap;}
+.agenda-nav{display:flex;align-items:center;gap:8px;}
+.agenda-nav button{background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 14px;cursor:pointer;font-size:14px;transition:all .2s;}
+.agenda-nav button:hover{background:var(--surface2);}
+.agenda-month{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;min-width:200px;text-align:center;}
+.agenda-today-btn{padding:7px 16px;border-radius:8px;background:var(--gold-dim);color:var(--gold);border:1px solid rgba(200,169,110,.3);font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s;}
+.agenda-today-btn:hover{background:rgba(200,169,110,.2);}
+.agenda-filter-client{background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 14px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;cursor:pointer;margin-left:auto;}
+.agenda-filter-client:focus{border-color:var(--gold);}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;}
+.cal-day-header{text-align:center;font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);padding:8px 0;}
+.cal-day{background:var(--surface);border:1px solid var(--border);border-radius:10px;min-height:90px;padding:8px;transition:border-color .2s;cursor:default;}
+.cal-day.has-purchase{border-color:rgba(200,169,110,.4);cursor:pointer;}
+.cal-day.has-purchase:hover{background:var(--surface2);}
+.cal-day.today{border-color:var(--gold);}
+.cal-day.other-month{opacity:.35;}
+.cal-day.selected{background:var(--gold-dim);border-color:var(--gold);}
+.cal-day-num{font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);margin-bottom:6px;}
+.cal-day.today .cal-day-num{color:var(--gold);font-weight:700;}
+.cal-purchase-dot{background:var(--gold-dim);border:1px solid rgba(200,169,110,.25);border-radius:20px;padding:2px 7px;font-size:10px;color:var(--gold);font-family:'DM Mono',monospace;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;display:block;}
+.day-detail{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;margin-top:20px;}
+.day-detail-title{font-family:'Playfair Display',serif;font-size:18px;font-weight:700;margin-bottom:4px;}
+.day-detail-sub{font-size:13px;color:var(--muted);margin-bottom:18px;}
+.pur-row{display:flex;align-items:center;gap:14px;padding:12px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;margin-bottom:8px;}
+.pur-row:last-child{margin-bottom:0;}
+.pur-avatar{width:34px;height:34px;border-radius:50%;background:var(--gold-dim);border:1px solid rgba(200,169,110,.3);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--gold);flex-shrink:0;font-family:'Playfair Display',serif;}
+.pur-name{font-weight:600;font-size:14px;}
+.pur-card-num{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);}
+.pur-book-name{font-size:13px;font-weight:500;}
+.pur-book-price{font-family:'DM Mono',monospace;font-size:12px;color:var(--danger);}
+.pur-time{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);margin-left:auto;flex-shrink:0;}
+.search-wrap{position:relative;margin-bottom:22px;}
+.search-wrap input{width:100%;max-width:380px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:11px 16px 11px 42px;color:var(--text);font-size:14px;font-family:'DM Sans',sans-serif;outline:none;transition:border-color .2s;}
+.search-wrap input:focus{border-color:var(--gold);}
+.search-wrap input::placeholder{color:var(--muted);}
+.search-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:14px;pointer-events:none;}
+.overlay{position:fixed;inset:0;background:rgba(12,14,18,.88);display:flex;align-items:center;justify-content:center;z-index:100;backdrop-filter:blur(4px);opacity:0;pointer-events:none;transition:opacity .2s;}
+.overlay.open{opacity:1;pointer-events:all;}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:32px;width:520px;max-width:94vw;transform:translateY(12px);transition:transform .2s;position:relative;max-height:90vh;overflow-y:auto;}
+.overlay.open .modal{transform:translateY(0);}
+.modal-title{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;margin-bottom:5px;}
+.modal-sub{font-size:13px;color:var(--muted);margin-bottom:22px;}
+.form-group{margin-bottom:16px;}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.form-lbl{font-size:11px;color:var(--muted);font-weight:500;margin-bottom:6px;display:block;text-transform:uppercase;letter-spacing:.08em;}
+.form-input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:14px;font-family:'DM Sans',sans-serif;outline:none;transition:border-color .2s;}
+.form-input:focus{border-color:var(--gold);}
+.form-input::placeholder{color:var(--muted);}
+.form-input option{background:var(--surface2);}
+textarea.form-input{resize:vertical;min-height:80px;}
+.modal-footer{display:flex;gap:10px;justify-content:flex-end;margin-top:22px;}
+.modal-x{position:absolute;top:16px;right:16px;background:var(--surface2);border:1px solid var(--border);color:var(--muted);width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:all .2s;}
+.modal-x:hover{color:var(--text);}
+.buy-row-modal{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);}
+.buy-row-modal:last-child{border-bottom:none;}
+.buy-info{display:flex;align-items:center;gap:12px;}
+.buy-icon{font-size:22px;}
+.buy-book-nm{font-weight:600;font-size:14px;margin-bottom:2px;}
+.buy-pr{font-family:'DM Mono',monospace;font-size:12px;color:var(--gold);}
+.buy-dim{opacity:.38;}
+.buy-insuf{font-size:11px;color:var(--danger);font-family:'DM Mono',monospace;text-transform:uppercase;}
+.icon-picker{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;}
+.icon-opt{width:36px;height:36px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:17px;cursor:pointer;transition:all .2s;}
+.icon-opt:hover{border-color:var(--gold);}
+.icon-opt.selected{border-color:var(--gold);background:var(--gold-dim);}
+.section{display:none;}
+.section.active{display:block;}
+.empty{text-align:center;padding:60px 20px;color:var(--muted);}
+.empty-icon{font-size:44px;margin-bottom:14px;opacity:.35;}
+.toasts{position:fixed;bottom:26px;right:26px;z-index:200;display:flex;flex-direction:column;gap:8px;}
+.toast{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:13px 18px;font-size:13px;min-width:230px;box-shadow:0 8px 28px rgba(0,0,0,.45);animation:tIn .25s ease forwards;}
+.toast.ok{border-left:3px solid var(--success);}
+.toast.err{border-left:3px solid var(--danger);}
+.toast.ban{border-left:3px solid var(--ban);}
+@keyframes tIn{from{transform:translateX(18px);opacity:0}to{transform:translateX(0);opacity:1}}
+#loading-bar{position:fixed;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--gold),var(--gold-light),var(--gold));z-index:9999;opacity:0;transition:opacity .2s;animation:loadSlide 1.2s ease-in-out infinite;}
+@keyframes loadSlide{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+.conseil-shell{display:grid;grid-template-columns:minmax(320px,420px) minmax(0,1fr);gap:20px;align-items:start;}
+.panel-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:22px;}
+.panel-card + .panel-card{margin-top:18px;}
+.panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px;flex-wrap:wrap;}
+.panel-title{font-family:'Playfair Display',serif;font-size:24px;font-weight:700;line-height:1.1;}
+.panel-copy{font-size:13px;color:var(--muted);line-height:1.7;max-width:70ch;}
+.conseil-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px;}
+.mini-stat{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;}
+.mini-stat-label{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px;}
+.mini-stat-value{font-family:'Playfair Display',serif;font-size:28px;color:var(--gold);line-height:1;}
+.conseil-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;}
+.conseil-card{background:linear-gradient(180deg,rgba(200,169,110,.08),transparent 38%),var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:12px;min-height:260px;}
+.conseil-tag{display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border-radius:999px;background:var(--gold-dim);color:var(--gold);font-family:'DM Mono',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;}
+.conseil-level{margin-left:auto;color:var(--text);opacity:.72;}
+.conseil-card h3{font-family:'Playfair Display',serif;font-size:24px;line-height:1.1;}
+.conseil-hook{font-size:14px;color:var(--text);line-height:1.6;}
+.conseil-summary{font-size:13px;color:var(--muted);line-height:1.7;}
+.conseil-list{padding-left:18px;color:var(--text);font-size:13px;line-height:1.7;}
+.conseil-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:auto;padding-top:8px;border-top:1px solid rgba(255,255,255,.05);}
+.conseil-meta{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;}
+.btn-row{display:flex;gap:10px;flex-wrap:wrap;}
+.drop-mail{border:1px dashed rgba(200,169,110,.45);border-radius:16px;padding:22px;background:linear-gradient(180deg,rgba(200,169,110,.08),rgba(19,22,28,.4));text-align:center;transition:all .2s;}
+.drop-mail.dragover{border-color:var(--gold-light);background:linear-gradient(180deg,rgba(200,169,110,.18),rgba(19,22,28,.55));transform:translateY(-2px);}
+.drop-mail strong{display:block;font-size:15px;margin-bottom:6px;}
+.drop-mail p{font-size:13px;color:var(--muted);line-height:1.7;}
+.drop-mail code{font-family:'DM Mono',monospace;color:var(--gold);}
+.export-box{width:100%;min-height:220px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px;color:var(--text);font-family:'DM Mono',monospace;font-size:12px;line-height:1.6;resize:vertical;}
+.section-link{display:inline-flex;align-items:center;gap:8px;text-decoration:none;color:var(--gold);font-size:13px;}
+.section-link:hover{color:var(--gold-light);}
+@media (max-width:1100px){.conseil-shell{grid-template-columns:1fr;}}
+@media (max-width:760px){
+  .grid-4,.grid-3,.conseil-grid,.conseil-stats{grid-template-columns:1fr;}
+  .main{padding:28px 20px 80px;}
+  .sidebar{position:relative;height:auto;width:100%;}
+  .layout{flex-direction:column;}
+}
+</style>
+</head>
+<body>
+<div id="loading-bar"></div>
+<div class="layout">
+
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-title">✦ Polio</div>
+      <div class="logo-sub">Panel administrateur</div>
+    </div>
+    <nav class="nav">
+      <div class="nav-item active" data-tab="cartes"><span class="nav-icon">💳</span>Cartes clients</div>
+      <div class="nav-item" data-tab="agenda"><span class="nav-icon">📅</span>Agenda achats</div>
+      <div class="nav-item" data-tab="livres"><span class="nav-icon">📚</span>Catalogue livres</div>
+    </nav>
+    <div class="sidebar-stats" id="sidebar-stats"></div>
+  </aside>
+
+  <main class="main">
+    <div class="page-title"><span>Polio</span> — Admin</div>
+    <div class="page-sub">Gérez les crédits, achats et le catalogue complet</div>
+    <div class="grid-4" id="stats-row"></div>
+
+    <div class="section active" id="section-cartes">
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="search-input" placeholder="Rechercher un client…">
+      </div>
+      <div class="tbl-wrap">
+        <div class="tbl-head">
+          <div><div class="tbl-title">Cartes Clients</div><div class="tbl-sub" id="clients-count"></div></div>
+          <button class="btn btn-gold btn-sm" id="btn-new-client">+ Nouvelle carte</button>
+        </div>
+        <table>
+          <thead><tr><th>Client</th><th>N° Carte</th><th>Crédits</th><th>Dernier achat</th><th>Actions</th></tr></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="section" id="section-agenda">
+      <div class="agenda-toolbar">
+        <div class="agenda-nav">
+          <button id="cal-prev">&#8592;</button>
+          <div class="agenda-month" id="cal-month-label"></div>
+          <button id="cal-next">&#8594;</button>
+        </div>
+        <button class="agenda-today-btn" id="cal-today-btn">Aujourd'hui</button>
+        <select class="agenda-filter-client" id="agenda-filter-client">
+          <option value="">Tous les clients</option>
+        </select>
+      </div>
+      <div class="cal-grid" id="cal-grid"></div>
+      <div id="day-detail"></div>
+    </div>
+
+    <div class="section" id="section-livres">
+      <div id="books-grid" class="grid-3"></div>
+      <button class="btn btn-gold" id="btn-add-book" style="margin-top:4px">+ Ajouter un livre</button>
+    </div>
+
+    <div class="section" id="section-conseils">
+      <div class="panel-head">
+        <div>
+          <div class="panel-title">Conseils pour réussir dans les livres</div>
+          <div class="panel-copy">Créez les conseils du nouveau site <strong>polio-conseil.netlify.app</strong>, exportez-les en JSON puis préparez l'envoi pour Gustave avec la zone de glisser-déposer.</div>
+        </div>
+        <a class="section-link" href="https://polio-conseil.netlify.app" target="_blank" rel="noreferrer">Voir le site conseil →</a>
+      </div>
+
+      <div class="conseil-stats" id="conseil-stats"></div>
+
+      <div class="conseil-shell">
+        <div>
+          <div class="panel-card">
+            <div class="tbl-title" style="margin-bottom:6px">Nouveau conseil</div>
+            <div class="tbl-sub" style="margin-bottom:18px">Un format simple, lisible et prêt pour le nouveau site.</div>
+            <input type="hidden" id="conseil-id">
+            <div class="form-group"><label class="form-lbl">Titre</label><input class="form-input" id="conseil-title" placeholder="Ex: Lire mieux en 20 minutes"></div>
+            <div class="form-row">
+              <div class="form-group"><label class="form-lbl">Catégorie</label><input class="form-input" id="conseil-category" placeholder="Ex: Organisation"></div>
+              <div class="form-group"><label class="form-lbl">Niveau</label><select class="form-input" id="conseil-level"><option value="Essentiel">Essentiel</option><option value="Intermédiaire">Intermédiaire</option><option value="Avancé">Avancé</option></select></div>
+            </div>
+            <div class="form-group"><label class="form-lbl">Accroche</label><input class="form-input" id="conseil-hook" placeholder="Une phrase forte qui donne envie de lire"></div>
+            <div class="form-group"><label class="form-lbl">Résumé</label><textarea class="form-input" id="conseil-summary" placeholder="Expliquez le bénéfice du conseil"></textarea></div>
+            <div class="form-group"><label class="form-lbl">Étapes</label><textarea class="form-input" id="conseil-steps" placeholder="Une étape par ligne"></textarea></div>
+            <div class="form-group"><label class="form-lbl">Citation / phrase clé</label><input class="form-input" id="conseil-quote" placeholder="Ex: Lire peu, mais lire tous les jours."></div>
+            <div class="form-group"><label class="form-lbl">Appel à l'action</label><input class="form-input" id="conseil-cta" placeholder="Ex: Choisis un livre et commence ce soir."></div>
+            <div class="btn-row">
+              <button class="btn btn-gold" id="btn-save-conseil">Enregistrer</button>
+              <button class="btn btn-ghost" id="btn-reset-conseil">Vider</button>
+            </div>
+          </div>
+
+          <div class="panel-card">
+            <div class="tbl-title" style="margin-bottom:6px">Export et envoi</div>
+            <div class="tbl-sub" style="margin-bottom:18px">Le JSON ci-dessous est compatible avec le site conseil.</div>
+            <div class="btn-row" style="margin-bottom:14px">
+              <button class="btn btn-gold btn-sm" id="btn-download-conseils">Télécharger JSON</button>
+              <button class="btn btn-ghost btn-sm" id="btn-copy-conseils">Copier JSON</button>
+            </div>
+            <textarea class="export-box" id="conseil-export" readonly></textarea>
+            <div class="drop-mail" id="mail-drop-zone" style="margin-top:16px">
+              <strong>Glissez un fichier JSON ici</strong>
+              <p>Le navigateur ne peut pas joindre automatiquement le fichier à un mail, mais le dépôt ouvre un message préparé pour <code>gustave.bo@protonmail.com</code> avec le bon sujet et le contenu prêt.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel-card">
+          <div class="tbl-head" style="padding:0 0 18px;border-bottom:none">
+            <div><div class="tbl-title">Bibliothèque de conseils</div><div class="tbl-sub" id="conseils-count"></div></div>
+          </div>
+          <div id="conseils-grid" class="conseil-grid"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="overlay" id="overlay">
+
+  <div class="modal" id="m-add-client" style="display:none">
+    <button class="modal-x" data-close>✕</button>
+    <div class="modal-title">Nouvelle carte client</div>
+    <div class="modal-sub">Créer une carte avec crédits initiaux</div>
+    <div class="form-group"><label class="form-lbl">Nom du client</label><input class="form-input" id="nc-name" placeholder="Ex: Marie Dupont"></div>
+    <div class="form-group"><label class="form-lbl">N° de carte</label><input class="form-input" id="nc-card" placeholder="Ex: CARD-0042"></div>
+    <div class="form-group"><label class="form-lbl">Crédits initiaux</label><input class="form-input" type="number" id="nc-credits" placeholder="0" min="0"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" data-close>Annuler</button>
+      <button class="btn btn-gold" id="btn-ok-add-client">Créer la carte</button>
+    </div>
+  </div>
+
+  <div class="modal" id="m-add-credits" style="display:none">
+    <button class="modal-x" data-close>✕</button>
+    <div class="modal-title">Ajouter des crédits</div>
+    <div class="modal-sub" id="mc-sub"></div>
+    <div class="form-group"><label class="form-lbl">Livre à attribuer</label><select class="form-input" id="mc-book"></select></div>
+    <div class="form-group"><label class="form-lbl">Ou montant libre</label><input class="form-input" type="number" id="mc-custom" placeholder="0" min="0"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" data-close>Annuler</button>
+      <button class="btn btn-gold" id="btn-ok-credits">Appliquer</button>
+    </div>
+  </div>
+
+  <div class="modal" id="m-buy" style="display:none">
+    <button class="modal-x" data-close>✕</button>
+    <div class="modal-title">🛒 Enregistrer un achat</div>
+    <div class="modal-sub">Client : <strong id="buy-name"></strong> — <span id="buy-solde"></span> crédits disponibles</div>
+    <div class="form-group"><label class="form-lbl">📅 Date</label><input class="form-input" type="date" id="buy-date"></div>
+    <div class="form-group"><label class="form-lbl">🕐 Heure</label><input class="form-input" type="time" id="buy-time"></div>
+    <div id="buy-list"></div>
+    <div class="modal-footer"><button class="btn btn-ghost" data-close>Fermer</button></div>
+  </div>
+
+  <!-- ✏️ Modifier livre — COMPLET -->
+  <div class="modal" id="m-edit-book" style="display:none">
+    <button class="modal-x" data-close>✕</button>
+    <div class="modal-title">✏️ Modifier le livre</div>
+    <div class="modal-sub">Toutes les informations sont synchronisées avec le site client</div>
+    <input type="hidden" id="eb-id">
+    <div class="form-row">
+      <div class="form-group"><label class="form-lbl">Titre *</label><input class="form-input" id="eb-title" placeholder="Titre du livre"></div>
+      <div class="form-group"><label class="form-lbl">Auteur</label><input class="form-input" id="eb-author" placeholder="Polio Éditions"></div>
+    </div>
+    <div class="form-group"><label class="form-lbl">Description</label><textarea class="form-input" id="eb-desc" placeholder="Résumé du livre…"></textarea></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-lbl">Crédits requis</label><input class="form-input" type="number" id="eb-credits" min="0"></div>
+      <div class="form-group">
+        <label class="form-lbl">Couleur de couverture</label>
+        <select class="form-input" id="eb-color">
+          <option value="cover-elite">Or / Nuit</option>
+          <option value="cover-coming1">Rouge / Sombre</option>
+          <option value="cover-coming2">Bleu / Nuit</option>
+          <option value="cover-coming3">Ambre / Sombre</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-lbl">Icône de couverture</label>
+      <div class="icon-picker" id="eb-icon-picker"></div>
+      <input type="hidden" id="eb-icon">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" data-close>Annuler</button>
+      <button class="btn btn-gold" id="btn-ok-edit-book">💾 Sauvegarder</button>
+    </div>
+  </div>
+
+  <!-- 📚 Ajouter livre — COMPLET -->
+  <div class="modal" id="m-add-book" style="display:none">
+    <button class="modal-x" data-close>✕</button>
+    <div class="modal-title">📚 Nouveau livre</div>
+    <div class="modal-sub">Le livre apparaîtra immédiatement sur le site client</div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-lbl">Titre *</label><input class="form-input" id="ab-title" placeholder="Ex: L'Art de la Discipline"></div>
+      <div class="form-group"><label class="form-lbl">Auteur</label><input class="form-input" id="ab-author" placeholder="Polio Éditions"></div>
+    </div>
+    <div class="form-group"><label class="form-lbl">Description courte</label><textarea class="form-input" id="ab-desc" placeholder="Résumé du livre…"></textarea></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-lbl">Crédits requis</label><input class="form-input" type="number" id="ab-credits" placeholder="0" min="0"></div>
+      <div class="form-group">
+        <label class="form-lbl">Couleur de couverture</label>
+        <select class="form-input" id="ab-color">
+          <option value="cover-elite">Or / Nuit</option>
+          <option value="cover-coming1">Rouge / Sombre</option>
+          <option value="cover-coming2">Bleu / Nuit</option>
+          <option value="cover-coming3">Ambre / Sombre</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-lbl">Icône de couverture</label>
+      <div class="icon-picker" id="ab-icon-picker"></div>
+      <input type="hidden" id="ab-icon" value="⚔">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" data-close>Annuler</button>
+      <button class="btn btn-gold" id="btn-ok-add-book">✦ Ajouter au catalogue</button>
+    </div>
+  </div>
+
+  <div class="modal" id="m-confirm" style="display:none">
+    <div class="modal-title" style="font-size:18px;padding-right:10px" id="confirm-txt"></div>
+    <div class="modal-footer" style="margin-top:22px">
+      <button class="btn btn-ghost" data-close>Annuler</button>
+      <button class="btn btn-danger" id="btn-ok-confirm">Confirmer</button>
+    </div>
+  </div>
+
+</div>
+
+<div class="toasts" id="toasts"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(function(){
+
+var SB_URL='https://comxzjhzpbwplibkfasw.supabase.co';
+var SB_KEY='sb_publishable_0r8i0ntrXnvOMUomFu9pZA_4cmGf8vp';
+var db=supabase.createClient(SB_URL,SB_KEY);
+
+var books=[],clients=[],purchases=[],conseils=[];
+var selCid=null,confirmCb=null;
+var calYear=new Date().getFullYear(),calMonth=new Date().getMonth();
+var selectedDay=null,agendaFilterCid=0;
+
+var ICONS=['⚔','◈','◉','✦','⬡','☽','📖','🌟','🔮','💎','🌙','🔥','🌊','✨','🏹','👑'];
+var COVER_COLORS={
+  'cover-elite':  {dot:'#c8a96e'},
+  'cover-coming1':{dot:'#c05050'},
+  'cover-coming2':{dot:'#4a7aaa'},
+  'cover-coming3':{dot:'#b8853a'}
+};
+
+function G(id){return document.getElementById(id);}
+function today(){return new Date().toISOString().split("T")[0];}
+function nowTime(){var n=new Date();return String(n.getHours()).padStart(2,"0")+":"+String(n.getMinutes()).padStart(2,"0");}
+function fmtDate(d){if(!d)return"—";var p=d.split("-");return p[2]+"/"+p[1]+"/"+p[0];}
+function creditCls(n){return n>=100?"ch":n>=30?"cm":"cl";}
+function initials(name){return name.split(" ").map(function(w){return w[0]||"";}).join("").toUpperCase().slice(0,2);}
+function toast(msg,type){var el=document.createElement("div");el.className="toast "+(type||"ok");el.textContent=msg;G("toasts").appendChild(el);setTimeout(function(){el.remove();},3200);}
+function sbErr(err){var msg=(typeof err==='string')?err:err?.message||JSON.stringify(err,null,2);toast("❌ "+msg,"err");console.error(err);}
+function setLoading(on){var el=G("loading-bar");if(el)el.style.opacity=on?"1":"0";}
+
+function slugify(str){return (str||"").toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'')||'conseil';}
+function humanDate(value){if(!value)return"-";return new Date(value).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'});}
+function escapeHtml(str){return String(str||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\"/g,"&quot;").replace(/'/g,"&#39;");}
+function normalizeConseilRow(row){
+  return{
+    id:row.id,
+    slug:row.slug||slugify(row.title),
+    title:row.title||'Conseil sans titre',
+    category:row.category||'General',
+    level:row.level||'Essentiel',
+    hook:row.hook||'',
+    summary:row.summary||'',
+    steps:Array.isArray(row.steps)?row.steps:String(row.steps||'').split(/\r?\n/).map(function(line){return line.trim();}).filter(Boolean),
+    quote:row.quote||'',
+    cta:row.cta||'',
+    updatedAt:row.updated_at||row.updatedAt||row.created_at||new Date().toISOString()
+  };
+}
+function conseilPayloadFromForm(id){
+  var title=G('conseil-title').value.trim();
+  var category=G('conseil-category').value.trim();
+  var level=G('conseil-level').value;
+  var hook=G('conseil-hook').value.trim();
+  var summary=G('conseil-summary').value.trim();
+  var steps=G('conseil-steps').value.split(/\r?\n/).map(function(line){return line.trim();}).filter(Boolean);
+  var quote=G('conseil-quote').value.trim();
+  var cta=G('conseil-cta').value.trim();
+  return{
+    id:id||undefined,
+    slug:slugify(title),
+    title:title,
+    category:category,
+    level:level,
+    hook:hook,
+    summary:summary,
+    steps:steps,
+    quote:quote,
+    cta:cta
+  };
+}
+function refreshConseilExport(){
+  var payload={site:'polio-conseil',updatedAt:new Date().toISOString(),conseils:conseils};
+  if(G('conseil-export'))G('conseil-export').value=JSON.stringify(payload,null,2);
+}
+function resetConseilForm(){
+  G('conseil-id').value='';
+  G('conseil-title').value='';
+  G('conseil-category').value='';
+  G('conseil-level').value='Essentiel';
+  G('conseil-hook').value='';
+  G('conseil-summary').value='';
+  G('conseil-steps').value='';
+  G('conseil-quote').value='';
+  G('conseil-cta').value='';
+}
+function fillConseilForm(item){
+  G('conseil-id').value=item.id;
+  G('conseil-title').value=item.title;
+  G('conseil-category').value=item.category;
+  G('conseil-level').value=item.level;
+  G('conseil-hook').value=item.hook;
+  G('conseil-summary').value=item.summary;
+  G('conseil-steps').value=(item.steps||[]).join('\n');
+  G('conseil-quote').value=item.quote;
+  G('conseil-cta').value=item.cta;
+}
+function renderConseilStats(){
+  var categories={};
+  conseils.forEach(function(item){categories[item.category||'General']=1;});
+  G('conseil-stats').innerHTML=
+    "<div class='mini-stat'><div class='mini-stat-label'>Conseils</div><div class='mini-stat-value'>"+conseils.length+"</div></div>"+
+    "<div class='mini-stat'><div class='mini-stat-label'>Categories</div><div class='mini-stat-value'>"+Object.keys(categories).length+"</div></div>"+
+    "<div class='mini-stat'><div class='mini-stat-label'>Export</div><div class='mini-stat-value'>JSON</div></div>";
+}
+function renderConseils(){
+  renderConseilStats();
+  G('conseils-count').textContent=conseils.length+" conseil(s) prets pour le site.";
+  var grid=G('conseils-grid');
+  if(!conseils.length){
+    grid.innerHTML="<div style='grid-column:1/-1'><div class='empty'><div class='empty-icon'>*</div>Aucun conseil pour l'instant.</div></div>";
+    return;
+  }
+  grid.innerHTML=conseils.slice().sort(function(a,b){return new Date(b.updatedAt)-new Date(a.updatedAt);}).map(function(item){
+    return "<article class='conseil-card'>"+
+      "<div class='conseil-tag'>"+escapeHtml(item.category)+" <span class='conseil-level'>"+escapeHtml(item.level)+"</span></div>"+
+      "<h3>"+escapeHtml(item.title)+"</h3>"+
+      "<div class='conseil-hook'>"+escapeHtml(item.hook)+"</div>"+
+      "<div class='conseil-summary'>"+escapeHtml(item.summary)+"</div>"+
+      "<ol class='conseil-list'>"+(item.steps||[]).map(function(step){return "<li>"+escapeHtml(step)+"</li>";}).join('')+"</ol>"+
+      "<div class='conseil-summary'><strong style='color:var(--gold)'>Citation :</strong> "+escapeHtml(item.quote||'-')+"</div>"+
+      "<div class='conseil-footer'><div class='conseil-meta'>Mis a jour "+humanDate(item.updatedAt)+"</div><div class='actions'><button class='btn btn-ghost btn-sm' data-action='edit-conseil' data-id='"+item.id+"'>Modifier</button><button class='btn btn-danger btn-sm' data-action='del-conseil' data-id='"+item.id+"'>Supprimer</button></div></div>"+
+    "</article>";
+  }).join('');
+}
+
+/* ICON PICKER */
+function buildIconPicker(containerId,hiddenId,selected){
+  var c=G(containerId);
+  c.innerHTML=ICONS.map(function(ic){
+    return '<div class="icon-opt'+(ic===selected?' selected':'')+'" data-icon="'+ic+'" data-target="'+hiddenId+'">'+ic+'</div>';
+  }).join('');
+  G(hiddenId).value=selected||ICONS[0];
+}
+document.addEventListener('click',function(e){
+  var opt=e.target.closest('.icon-opt');
+  if(!opt)return;
+  opt.parentElement.querySelectorAll('.icon-opt').forEach(function(o){o.classList.remove('selected');});
+  opt.classList.add('selected');
+  G(opt.dataset.target).value=opt.dataset.icon;
+});
+
+/* MODAL */
+function openModal(id){document.querySelectorAll(".modal").forEach(function(m){m.style.display="none";});G(id).style.display="block";G("overlay").classList.add("open");}
+function closeModal(){G("overlay").classList.remove("open");}
+G("overlay").addEventListener("click",function(e){if(e.target===this)closeModal();});
+document.addEventListener("click",function(e){if(e.target.closest("[data-close]"))closeModal();});
+function openConfirm(msg,cb){confirmCb=cb;G("confirm-txt").textContent=msg;openModal("m-confirm");}
+G("btn-ok-confirm").addEventListener("click",function(){closeModal();if(confirmCb){confirmCb();confirmCb=null;}});
+
+/* TABS */
+document.querySelectorAll(".nav-item[data-tab]").forEach(function(item){
+  item.addEventListener("click",function(){
+    document.querySelectorAll(".nav-item").forEach(function(n){n.classList.remove("active");});
+    document.querySelectorAll(".section").forEach(function(s){s.classList.remove("active");});
+    item.classList.add("active");G("section-"+item.dataset.tab).classList.add("active");
+  });
+});
+
+/* LOAD */
+async function loadAll(){
+  setLoading(true);
+  try{
+    var[rb,rc,rp,rs]=await Promise.all([
+      db.from("books").select("*").order("created_at",{ascending:true}),
+      db.from("clients").select("*").order("created_at",{ascending:true}),
+      db.from("purchases").select("*").order("date",{ascending:true}),
+      db.from("conseils").select("*").order("updated_at",{ascending:false})
+    ]);
+    if(rb.error){sbErr(rb.error);setLoading(false);return;}
+    if(rc.error){sbErr(rc.error);setLoading(false);return;}
+    if(rp.error){sbErr(rp.error);setLoading(false);return;}
+    if(rs.error){sbErr(rs.error);setLoading(false);return;}
+    books=(rb.data||[]).map(function(b){
+      return{id:b.id,title:b.title,author:b.author||'Polio Éditions',description:b.description||b.desc||'',credits:parseInt(b.credits)||0,icon:b.icon||'📖',color:b.color||'cover-elite'};
+    });
+    clients=(rc.data||[]).map(function(c){
+      return{id:c.id,name:c.name,card:c.card_number,credits:c.credits||0,lastPurchase:c.last_purchase||today(),banned:c.banned||false};
+    });
+    purchases=(rp.data||[]).map(function(p){
+      return{id:p.id,clientId:p.client_id,bookId:p.book_id,date:p.date,time:p.time||"00:00"};
+    });
+    conseils=(rs.data||[]).map(normalizeConseilRow);
+    refreshConseilExport();
+    renderAll();
+  }catch(err){sbErr(err);}
+  setLoading(false);
+}
+
+function renderAll(){renderSidebar();renderStats();renderClients();renderBooks();renderAgenda();renderConseils();}
+
+function renderSidebar(){
+  var active=clients.filter(function(c){return!c.banned;});
+  var banned=clients.length-active.length;
+  var total=active.reduce(function(s,c){return s+c.credits;},0);
+  G("sidebar-stats").innerHTML="<div class='ss-label'>📊 Résumé</div>"+
+    "<div class='ss-row'><span>Clients actifs</span><span class='ss-val'>"+active.length+"</span></div>"+
+    "<div class='ss-row'><span>Bannis</span><span class='ss-val' style='color:"+(banned?"var(--ban)":"var(--gold)")+"'>"+banned+"</span></div>"+
+    "<div class='ss-row'><span>Achats</span><span class='ss-val'>"+purchases.length+"</span></div>"+
+    "<div class='ss-row'><span>Crédits restants</span><span class='ss-val'>"+total+"</span></div>"+
+    "<div class='ss-row'><span>Livres catalogue</span><span class='ss-val'>"+books.length+"</span></div>";
+}
+
+function renderStats(){
+  var total=clients.reduce(function(s,c){return s+c.credits;},0);
+  var banned=clients.filter(function(c){return c.banned;}).length;
+  var spent=purchases.reduce(function(s,p){var b=books.find(function(x){return x.id===p.bookId;});return s+(b?b.credits:0);},0);
+  var days={};purchases.forEach(function(p){days[p.date]=1;});
+  G("stats-row").innerHTML=
+    "<div class='stat-card' data-icon='👥'><div class='stat-lbl'>Clients actifs</div><div class='stat-num'>"+(clients.length-banned)+"</div><div class='stat-desc'>"+clients.length+" au total</div></div>"+
+    "<div class='stat-card' data-icon='📅'><div class='stat-lbl'>Jours d'achat</div><div class='stat-num'>"+Object.keys(days).length+"</div><div class='stat-desc'>"+purchases.length+" achat(s) total</div></div>"+
+    "<div class='stat-card' data-icon='🛒'><div class='stat-lbl'>Crédits dépensés</div><div class='stat-num'>"+spent+"</div><div class='stat-desc'>tous achats confondus</div></div>"+
+    "<div class='stat-card' data-icon='✦'><div class='stat-lbl'>Crédits restants</div><div class='stat-num'>"+total+"</div><div class='stat-desc'>sur toutes les cartes</div></div>";
+}
+
+function renderClients(){
+  var q=(G("search-input").value||"").toLowerCase();
+  var list=clients.filter(function(c){return c.name.toLowerCase().indexOf(q)>=0||c.card.toLowerCase().indexOf(q)>=0;});
+  var banned=clients.filter(function(c){return c.banned;}).length;
+  G("clients-count").textContent=list.length+" client(s) · "+banned+" banni(s)";
+  var tbody=G("tbody");
+  if(!list.length){tbody.innerHTML="<tr><td colspan='5'><div class='empty'><div class='empty-icon'>🔍</div>Aucun client</div></td></tr>";return;}
+  tbody.innerHTML=list.map(function(c){
+    var cred=c.banned?"<span style='color:var(--muted);font-size:13px'>—</span>":"<span class='credit-badge "+creditCls(c.credits)+"'>✦ "+c.credits+" crédits</span>";
+    var banBadge=c.banned?"<span class='ban-badge'>🚫 Banni</span>":"";
+    var buyBtn=c.banned?"":"<button class='btn btn-gold btn-sm' data-action='buy' data-id='"+c.id+"'>🛒 Achat</button>";
+    var addBtn=c.banned?"":"<button class='btn btn-ghost btn-sm' data-action='add-credits' data-id='"+c.id+"'>+ Crédits</button>";
+    var banBtn=c.banned?"<button class='btn btn-unban btn-sm' data-action='unban' data-id='"+c.id+"'>✅ Débannir</button>":"<button class='btn btn-ban btn-sm' data-action='ban' data-id='"+c.id+"'>🚫 Bannir</button>";
+    var delBtn="<button class='btn btn-danger btn-sm' data-action='del-client' data-id='"+c.id+"'>Supprimer</button>";
+    return "<tr class='"+(c.banned?"banned-row":"")+"'><td><strong>"+c.name+"</strong>"+banBadge+"</td><td><span style='font-family:DM Mono,monospace;font-size:12px;color:var(--muted)'>"+c.card+"</span></td><td>"+cred+"</td><td style='color:var(--muted);font-size:13px'>"+fmtDate(c.lastPurchase)+"</td><td><div class='actions'>"+buyBtn+addBtn+banBtn+delBtn+"</div></td></tr>";
+  }).join("");
+}
+
+function renderBooks(){
+  var grid=G("books-grid");
+  if(!books.length){grid.innerHTML="<div style='grid-column:1/-1'><div class='empty'><div class='empty-icon'>📭</div>Aucun livre</div></div>";return;}
+  grid.innerHTML=books.map(function(b){
+    var dot=COVER_COLORS[b.color]||COVER_COLORS['cover-elite'];
+    return "<div class='book-card'>"+
+      "<div class='bc-icon'>"+b.icon+"</div>"+
+      "<div class='bc-title'>"+b.title+"</div>"+
+      "<div class='bc-author'>"+b.author+"</div>"+
+      (b.description?"<div class='bc-desc'>"+b.description+"</div>":"")+
+      "<div class='bc-meta'><span class='bc-color-dot' style='background:"+dot.dot+"'></span><div class='bc-credits'>"+b.credits+" <span>crédits</span></div></div>"+
+      "<div class='bc-actions'><button class='btn btn-ghost btn-sm' data-action='edit-book' data-id='"+b.id+"'>✏️ Modifier</button><button class='btn btn-danger btn-sm' data-action='del-book' data-id='"+b.id+"'>🗑️ Supprimer</button></div></div>";
+  }).join("");
+}
+
+var MONTHS_FR=["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
+var DAYS_FR=["Lun","Mar","Mer","Jeu","Ven","Sam","Dim"];
+
+function renderAgenda(){
+  var fc=G("agenda-filter-client");
+  fc.innerHTML="<option value=''>Tous les clients</option>"+clients.map(function(c){return"<option value='"+c.id+"'"+(c.id===agendaFilterCid?" selected":"")+">"+c.name+"</option>";}).join("");
+  G("cal-month-label").textContent=MONTHS_FR[calMonth]+" "+calYear;
+  var firstDay=new Date(calYear,calMonth,1),lastDay=new Date(calYear,calMonth+1,0);
+  var startDow=(firstDay.getDay()+6)%7,todayStr=today();
+  var html="";
+  DAYS_FR.forEach(function(d){html+="<div class='cal-day-header'>"+d+"</div>";});
+  for(var i=0;i<startDow;i++){var d=new Date(calYear,calMonth,1-startDow+i);html+="<div class='cal-day other-month'><div class='cal-day-num'>"+d.getDate()+"</div></div>";}
+  for(var day=1;day<=lastDay.getDate();day++){
+    var mm=String(calMonth+1).padStart(2,"0"),dd=String(day).padStart(2,"0"),dateStr=calYear+"-"+mm+"-"+dd;
+    var isToday=dateStr===todayStr,isSelected=dateStr===selectedDay;
+    var dp=purchases.filter(function(p){return p.date===dateStr&&(!agendaFilterCid||p.clientId===agendaFilterCid);});
+    var cls="cal-day"+(isToday?" today":"")+(isSelected?" selected":"")+(dp.length?" has-purchase":"");
+    html+="<div class='"+cls+"' data-action='select-day' data-date='"+dateStr+"'><div class='cal-day-num'>"+day+"</div>";
+    dp.slice(0,3).forEach(function(p){var c=clients.find(function(x){return x.id===p.clientId;});var b=books.find(function(x){return x.id===p.bookId;});if(c&&b)html+="<div class='cal-purchase-dot'>"+initials(c.name)+" −"+b.credits+"c</div>";});
+    if(dp.length>3)html+="<div style='font-size:10px;color:var(--muted)'>+"+(dp.length-3)+" autres</div>";
+    html+="</div>";
+  }
+  var remaining=(7-(startDow+lastDay.getDate())%7)%7;
+  for(var i=1;i<=remaining;i++)html+="<div class='cal-day other-month'><div class='cal-day-num'>"+i+"</div></div>";
+  G("cal-grid").innerHTML=html;
+  if(selectedDay)renderDayDetail(selectedDay);else G("day-detail").innerHTML="";
+}
+
+function renderDayDetail(dateStr){
+  var dp=purchases.filter(function(p){return p.date===dateStr&&(!agendaFilterCid||p.clientId===agendaFilterCid);});
+  dp.sort(function(a,b){return a.time<b.time?-1:1;});
+  var spent=dp.reduce(function(s,p){var b=books.find(function(x){return x.id===p.bookId;});return s+(b?b.credits:0);},0);
+  var html="<div class='day-detail'><div class='day-detail-title'>📅 "+fmtDate(dateStr)+"</div><div class='day-detail-sub'>"+dp.length+" achat(s) · "+spent+" crédits dépensés</div>";
+  if(!dp.length)html+="<div style='color:var(--muted);font-size:13px;padding:16px 0'>Aucun achat ce jour-là.</div>";
+  else dp.forEach(function(p){
+    var c=clients.find(function(x){return x.id===p.clientId;});var b=books.find(function(x){return x.id===p.bookId;});if(!c||!b)return;
+    html+="<div class='pur-row'><div class='pur-avatar'>"+initials(c.name)+"</div><div style='flex:1'><div class='pur-name'>"+c.name+"</div><div class='pur-card-num'>"+c.card+"</div></div><div style='flex:1'><div class='pur-book-name'>"+b.title+"</div><div class='pur-book-price'>−"+b.credits+" crédits</div></div><div class='pur-time'>"+p.time+"</div><button class='btn btn-danger btn-sm' data-action='del-purchase' data-id='"+p.id+"'>↩</button></div>";
+  });
+  G("day-detail").innerHTML=html+"</div>";
+}
+
+function renderBuyList(c){
+  G("buy-list").innerHTML=books.map(function(b){
+    var ok=c.credits>=b.credits;
+    return "<div class='buy-row-modal"+(ok?"":" buy-dim")+"'><div class='buy-info'><span class='buy-icon'>"+b.icon+"</span><div><div class='buy-book-nm'>"+b.title+"</div><div class='buy-pr'>"+b.credits+" crédits</div></div></div>"+(ok?"<button class='btn btn-gold btn-sm' data-action='confirm-buy' data-id='"+b.id+"'>Acheter</button>":"<span class='buy-insuf'>Insuffisant</span>")+"</div>";
+  }).join("");
+}
+
+G("cal-prev").addEventListener("click",function(){calMonth--;if(calMonth<0){calMonth=11;calYear--;}selectedDay=null;renderAgenda();});
+G("cal-next").addEventListener("click",function(){calMonth++;if(calMonth>11){calMonth=0;calYear++;}selectedDay=null;renderAgenda();});
+G("cal-today-btn").addEventListener("click",function(){var n=new Date();calYear=n.getFullYear();calMonth=n.getMonth();selectedDay=today();renderAgenda();});
+G("agenda-filter-client").addEventListener("change",function(){agendaFilterCid=parseInt(this.value)||0;renderAgenda();});
+G("search-input").addEventListener("input",renderClients);
+
+document.addEventListener("click",function(e){
+  var btn=e.target.closest("[data-action]");if(!btn)return;
+  var action=btn.dataset.action,id=parseInt(btn.dataset.id)||0;
+
+  if(action==="select-day"){var d=btn.dataset.date;selectedDay=(selectedDay===d)?null:d;renderAgenda();return;}
+
+  if(action==="buy"){
+    var c=clients.find(function(x){return x.id===id;});selCid=id;
+    G("buy-name").textContent=c.name;G("buy-solde").textContent=c.credits;
+    G("buy-date").value=today();G("buy-time").value=nowTime();
+    renderBuyList(c);openModal("m-buy");return;
+  }
+
+  if(action==="confirm-buy"){
+    var b=books.find(function(x){return x.id===id;});var c=clients.find(function(x){return x.id===selCid;});
+    if(c.credits<b.credits){toast("Crédits insuffisants","err");return;}
+    var dateVal=G("buy-date").value||today(),timeVal=G("buy-time").value||nowTime();
+    setLoading(true);
+    Promise.all([
+      db.from("purchases").insert([{client_id:c.id,book_id:b.id,date:dateVal,time:timeVal}]).select().single(),
+      db.from("clients").update({credits:c.credits-b.credits,last_purchase:dateVal}).eq("id",c.id)
+    ]).then(function(results){
+      var rp=results[0],rc=results[1];
+      if(rp.error)throw rp.error;if(rc.error)throw rc.error;
+      c.credits-=b.credits;c.lastPurchase=dateVal;
+      purchases.push({id:rp.data.id,clientId:c.id,bookId:b.id,date:dateVal,time:timeVal});
+      G("buy-solde").textContent=c.credits;renderBuyList(c);renderAll();
+      toast("🛒 "+c.name+" — "+b.title+" (−"+b.credits+" crédits)","ok");setLoading(false);
+    }).catch(function(err){sbErr(err);setLoading(false);});return;
+  }
+
+  if(action==="add-credits"){
+    var c=clients.find(function(x){return x.id===id;});if(c.banned){toast("Ce compte est banni","err");return;}
+    selCid=id;G("mc-sub").textContent="Client : "+c.name+" — "+c.credits+" crédits actuels";
+    G("mc-book").innerHTML="<option value=''>— Choisir un livre —</option>"+books.map(function(b){return"<option value='"+b.id+"'>"+b.title+" ("+b.credits+" crédits)</option>";}).join("");
+    G("mc-custom").value="";openModal("m-add-credits");return;
+  }
+
+  if(action==="ban"){
+    var c=clients.find(function(x){return x.id===id;});setLoading(true);
+    db.from("clients").update({banned:true}).eq("id",id).then(function(r){if(r.error){sbErr(r.error);setLoading(false);return;}c.banned=true;renderAll();toast("🚫 "+c.name+" a été banni","ban");setLoading(false);});return;
+  }
+
+  if(action==="unban"){
+    var c=clients.find(function(x){return x.id===id;});setLoading(true);
+    db.from("clients").update({banned:false}).eq("id",id).then(function(r){if(r.error){sbErr(r.error);setLoading(false);return;}c.banned=false;renderAll();toast("✅ "+c.name+" a été débanni","ok");setLoading(false);});return;
+  }
+
+  if(action==="del-client"){
+    var c=clients.find(function(x){return x.id===id;});
+    openConfirm("Supprimer la carte de "+c.name+" ?",function(){
+      setLoading(true);
+      db.from("clients").delete().eq("id",id).then(function(r){if(r.error){sbErr(r.error);setLoading(false);return;}clients=clients.filter(function(x){return x.id!==id;});purchases=purchases.filter(function(p){return p.clientId!==id;});renderAll();toast("🗑️ Carte supprimée","ok");setLoading(false);});
+    });return;
+  }
+
+  if(action==="edit-book"){
+    var b=books.find(function(x){return x.id===id;});
+    G("eb-id").value=b.id;G("eb-title").value=b.title;G("eb-author").value=b.author||'Polio Éditions';
+    G("eb-desc").value=b.description||'';G("eb-credits").value=b.credits;G("eb-color").value=b.color||'cover-elite';
+    buildIconPicker('eb-icon-picker','eb-icon',b.icon||'⚔');
+    openModal("m-edit-book");return;
+  }
+
+  if(action==="del-book"){
+    var b=books.find(function(x){return x.id===id;});
+    openConfirm("Supprimer \""+b.title+"\" ?",function(){
+      setLoading(true);
+      db.from("books").delete().eq("id",id).then(function(r){if(r.error){sbErr(r.error);setLoading(false);return;}books=books.filter(function(x){return x.id!==id;});renderAll();toast("🗑️ Livre supprimé","ok");setLoading(false);});
+    });return;
+  }
+
+  if(action==="del-purchase"){
+    var p=purchases.find(function(x){return x.id===id;});
+    var b=books.find(function(x){return x.id===p.bookId;});var c=clients.find(function(x){return x.id===p.clientId;});
+    openConfirm("Annuler cet achat et rembourser "+b.credits+" crédits à "+c.name+" ?",function(){
+      setLoading(true);var newCredits=c.credits+b.credits;
+      Promise.all([db.from("purchases").delete().eq("id",id),db.from("clients").update({credits:newCredits}).eq("id",c.id)])
+      .then(function(results){if(results[0].error)throw results[0].error;if(results[1].error)throw results[1].error;c.credits=newCredits;purchases=purchases.filter(function(x){return x.id!==id;});if(selectedDay)renderDayDetail(selectedDay);renderAll();toast("↩️ Achat annulé — +"+b.credits+" crédits rendus à "+c.name,"ok");setLoading(false);})
+      .catch(function(err){sbErr(err);setLoading(false);});
+    });return;
+  }
+  if(action==="edit-conseil"){
+    var conseil=conseils.find(function(x){return x.id===id;});
+    if(!conseil)return;
+    fillConseilForm(conseil);
+    document.querySelector('[data-tab="conseils"]').click();
+    window.scrollTo({top:0,behavior:'smooth'});
+    return;
+  }
+
+  if(action==="del-conseil"){
+    var cible=conseils.find(function(x){return x.id===id;});
+    if(!cible)return;
+    openConfirm('Supprimer le conseil "'+cible.title+'" ?',function(){
+      setLoading(true);
+      db.from("conseils").delete().eq("id",id).then(function(r){
+        if(r.error){sbErr(r.error);setLoading(false);return;}
+        conseils=conseils.filter(function(x){return x.id!==id;});
+        refreshConseilExport();
+        renderConseils();
+        toast("Conseil supprime","ok");
+        setLoading(false);
+      });
+    });
+    return;
+  }
+});
+
+G("btn-new-client").addEventListener("click",function(){G("nc-name").value="";G("nc-card").value="";G("nc-credits").value="";openModal("m-add-client");});
+G("btn-ok-add-client").addEventListener("click",function(){
+  var name=G("nc-name").value.trim(),card=G("nc-card").value.trim(),credits=parseInt(G("nc-credits").value)||0;
+  if(!name||!card){toast("Remplissez le nom et le n° de carte","err");return;}
+  setLoading(true);
+  db.from("clients").insert([{name:name,card_number:card,credits:credits,last_purchase:today(),banned:false}]).select().single()
+  .then(function(r){if(r.error){sbErr(r.error);setLoading(false);return;}clients.push({id:r.data.id,name:name,card:card,credits:credits,lastPurchase:today(),banned:false});closeModal();renderAll();toast("✅ Carte créée pour "+name,"ok");setLoading(false);});
+});
+
+G("btn-ok-credits").addEventListener("click",function(){
+  var bid=parseInt(G("mc-book").value),custom=parseInt(G("mc-custom").value)||0;
+  var amount=bid?books.find(function(b){return b.id===bid;}).credits:custom;
+  if(!amount){toast("Choisissez un livre ou entrez un montant","err");return;}
+  var c=clients.find(function(x){return x.id===selCid;});var newCredits=c.credits+amount;
+  setLoading(true);
+  db.from("clients").update({credits:newCredits,last_purchase:today()}).eq("id",c.id)
+  .then(function(r){if(r.error){sbErr(r.error);setLoading(false);return;}c.credits=newCredits;c.lastPurchase=today();closeModal();renderAll();toast("✦ +"+amount+" crédits ajoutés à "+c.name,"ok");setLoading(false);});
+});
+
+G("btn-ok-edit-book").addEventListener("click",function(){
+  var id=parseInt(G("eb-id").value);
+  var title=G("eb-title").value.trim(),author=G("eb-author").value.trim()||'Polio Éditions';
+  var description=G("eb-desc").value.trim(),credits=parseInt(G("eb-credits").value)||0;
+  var color=G("eb-color").value,icon=G("eb-icon").value||'⚔';
+  if(!title){toast("Entrez un titre","err");return;}
+  setLoading(true);
+  db.from("books").update({title:title,author:author,description:description,credits:String(credits),color:color,icon:icon}).eq("id",id)
+  .then(function(r){
+    if(r.error){sbErr(r.error);setLoading(false);return;}
+    var b=books.find(function(x){return x.id===id;});
+    b.title=title;b.author=author;b.description=description;b.credits=credits;b.color=color;b.icon=icon;
+    closeModal();renderAll();toast("✅ Livre modifié","ok");setLoading(false);
+  });
+});
+
+G("btn-add-book").addEventListener("click",function(){
+  G("ab-title").value="";G("ab-author").value="";G("ab-desc").value="";G("ab-credits").value="";G("ab-color").value="cover-elite";
+  buildIconPicker('ab-icon-picker','ab-icon','⚔');
+  openModal("m-add-book");
+});
+
+G("btn-ok-add-book").addEventListener("click",function(){
+  var title=G("ab-title").value.trim(),author=G("ab-author").value.trim()||'Polio Éditions';
+  var description=G("ab-desc").value.trim(),credits=parseInt(G("ab-credits").value)||0;
+  var color=G("ab-color").value,icon=G("ab-icon").value||'⚔';
+  if(!title){toast("Entrez un titre","err");return;}
+  setLoading(true);
+  db.from("books").insert([{title:title,author:author,description:description,credits:String(credits),color:color,icon:icon}]).select().single()
+  .then(function(r){
+    if(r.error){sbErr(r.error);setLoading(false);return;}
+    books.push({id:r.data.id,title:title,author:author,description:description,credits:credits,icon:icon,color:color});
+    closeModal();renderAll();toast("📚 "+title+" ajouté au catalogue","ok");setLoading(false);
+  });
+});
+
+G("btn-save-conseil").addEventListener("click",function(){
+  var id=parseInt(G('conseil-id').value,10)||0;
+  var payload=conseilPayloadFromForm(id);
+  if(!payload.title||!payload.category||!payload.hook||!payload.summary||!payload.steps.length){
+    toast("Completez au moins le titre, la categorie, l accroche, le resume et une etape","err");
+    return;
+  }
+  setLoading(true);
+  var query=id
+    ? db.from("conseils").update(payload).eq("id",id).select().single()
+    : db.from("conseils").insert([payload]).select().single();
+  query.then(function(r){
+    if(r.error){sbErr(r.error);setLoading(false);return;}
+    var normalized=normalizeConseilRow(r.data);
+    var existingIndex=conseils.findIndex(function(item){return item.id===normalized.id;});
+    if(existingIndex>=0)conseils[existingIndex]=normalized;else conseils.unshift(normalized);
+    refreshConseilExport();
+    renderConseils();
+    resetConseilForm();
+    toast(existingIndex>=0?"Conseil mis a jour":"Conseil ajoute","ok");
+    setLoading(false);
+  });
+});
+
+G("btn-reset-conseil").addEventListener("click",function(){resetConseilForm();});
+
+G("btn-copy-conseils").addEventListener("click",function(){
+  var exportText=G('conseil-export').value;
+  if(!exportText)return;
+  navigator.clipboard.writeText(exportText).then(function(){toast("JSON copie","ok");}).catch(function(){toast("Copie impossible","err");});
+});
+
+G("btn-download-conseils").addEventListener("click",function(){
+  var blob=new Blob([G('conseil-export').value],{type:'application/json'});
+  var url=URL.createObjectURL(blob);
+  var link=document.createElement('a');
+  link.href=url;
+  link.download='polio-conseils.json';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+  toast("Export JSON telecharge","ok");
+});
+
+['dragenter','dragover'].forEach(function(evt){
+  G('mail-drop-zone').addEventListener(evt,function(e){e.preventDefault();this.classList.add('dragover');});
+});
+['dragleave','drop'].forEach(function(evt){
+  G('mail-drop-zone').addEventListener(evt,function(e){e.preventDefault();this.classList.remove('dragover');});
+});
+G('mail-drop-zone').addEventListener('drop',function(e){
+  var file=e.dataTransfer.files&&e.dataTransfer.files[0];
+  var subject=encodeURIComponent('Polio Conseil - export conseils');
+  var bodyLines=[
+    'Bonjour Gustave,',
+    '',
+    'Je t envoie l export JSON des conseils pour polio-conseil.netlify.app.',
+    file?'Fichier depose : '+file.name:'',
+    'Ajoute la piece jointe manuellement depuis le navigateur ou ProtonMail.',
+    '',
+    'Apercu :',
+    G('conseil-export').value.slice(0,1200)
+  ].filter(Boolean);
+  window.location.href='mailto:gustave.bo@protonmail.com?subject='+subject+'&body='+encodeURIComponent(bodyLines.join('\n'));
+  toast("Mail prepare pour Gustave","ok");
+});
+
+resetConseilForm();
+loadAll();
+})();
+</script>
+</body>
+</html>
