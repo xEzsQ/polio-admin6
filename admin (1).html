@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Polio — Admin</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="icon" type="image/x-icon" href="/favicon.ico?v=2">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0c0e12;--surface:#13161c;--surface2:#1a1e27;--border:#252a36;
+  --gold:#c8a96e;--gold-light:#e2c98a;--gold-dim:rgba(200,169,110,.12);
+  --text:#e8e4dc;--muted:#6b7280;--danger:#e05555;--success:#4eca8b;
+  --ban:#f97316;--ban-dim:rgba(249,115,22,.12);
+  --purple:#8b5cf6;--purple-dim:rgba(139,92,246,.12);
+  --ready:#4eca8b;--ready-dim:rgba(78,202,139,.12);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:radial-gradient(ellipse 80% 60% at 15% 0%,rgba(200,169,110,.05) 0%,transparent 60%),
+             radial-gradient(ellipse 60% 40% at 85% 100%,rgba(139,92,246,.04) 0%,transparent 60%);}
+.layout{display:flex;min-height:100vh;position:relative;z-index:1;}
+.sidebar{width:268px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:32px 0;position:sticky;top:0;height:100vh;flex-shrink:0;}
+.logo{padding:0 28px 28px;border-bottom:1px solid var(--border);}
+.logo-title{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:var(--gold);}
+.logo-sub{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:.15em;text-transform:uppercase;margin-top:3px;}
+.nav{padding:20px 16px;flex:1;}
+.nav-item{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:8px;cursor:pointer;font-size:14px;color:var(--muted);transition:all .2s;margin-bottom:2px;user-select:none;}
+.nav-item:hover{background:var(--surface2);color:var(--text);}
+.nav-item.active{background:var(--gold-dim);color:var(--gold);}
+.nav-icon{font-size:16px;width:20px;text-align:center;}
+.sidebar-stats{margin:16px;padding:16px;background:var(--surface2);border-radius:10px;border:1px solid var(--border);}
+.ss-label{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;margin-bottom:10px;}
+.ss-row{display:flex;justify-content:space-between;margin-bottom:7px;font-size:13px;}
+.ss-row:last-child{margin-bottom:0;}
+.ss-val{font-family:'DM Mono',monospace;color:var(--gold);}
+.main{flex:1;padding:40px 48px;overflow-y:auto;}
+.page-title{font-family:'Playfair Display',serif;font-size:34px;font-weight:900;line-height:1.1;margin-bottom:6px;}
+.page-title span{color:var(--gold);}
+.page-sub{font-size:14px;color:var(--muted);margin-bottom:36px;}
+.btn{padding:10px 20px;border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;font-weight:500;cursor:pointer;border:none;transition:all .2s;display:inline-flex;align-items:center;gap:8px;}
+.btn-gold{background:var(--gold);color:#0c0e12;}
+.btn-gold:hover{background:var(--gold-light);transform:translateY(-1px);}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border);}
+.btn-ghost:hover{background:var(--surface2);color:var(--text);}
+.btn-danger{background:rgba(224,85,85,.15);color:var(--danger);border:1px solid rgba(224,85,85,.3);}
+.btn-danger:hover{background:rgba(224,85,85,.25);}
+.btn-ban{background:var(--ban-dim);color:var(--ban);border:1px solid rgba(249,115,22,.3);}
+.btn-unban{background:rgba(78,202,139,.15);color:var(--success);border:1px solid rgba(78,202,139,.3);}
+.btn-ready{background:var(--ready-dim);color:var(--ready);border:1px solid rgba(78,202,139,.3);}
+.btn-ready:hover{background:rgba(78,202,139,.25);}
+.btn-sm{padding:6px 12px;font-size:12px;}
+.btn-purple{background:var(--purple-dim);color:var(--purple);border:1px solid rgba(139,92,246,.3);}
+.btn-purple:hover{background:rgba(139,92,246,.2);}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:32px;}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px;}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;position:relative;overflow:hidden;}
+.stat-card::before{content:attr(data-icon);position:absolute;right:18px;top:16px;font-size:26px;opacity:.12;}
+.stat-lbl{font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin-bottom:8px;}
+.stat-num{font-family:'Playfair Display',serif;font-size:36px;font-weight:700;color:var(--gold);line-height:1;}
+.stat-desc{font-size:12px;color:var(--muted);margin-top:7px;}
+.tbl-wrap{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:28px;}
+.tbl-head{padding:18px 22px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;}
+.tbl-title{font-family:'Playfair Display',serif;font-size:18px;font-weight:700;}
+.tbl-sub{font-size:12px;color:var(--muted);margin-top:2px;}
+table{width:100%;border-collapse:collapse;}
+thead th{padding:10px 20px;text-align:left;font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);border-bottom:1px solid var(--border);font-weight:400;}
+tbody tr{transition:background .15s;}
+tbody tr:hover{background:var(--surface2);}
+tbody td{padding:13px 20px;font-size:14px;border-bottom:1px solid rgba(37,42,54,.5);}
+tbody tr:last-child td{border-bottom:none;}
+.credit-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-family:'DM Mono',monospace;font-size:12px;font-weight:500;}
+.ch{background:rgba(78,202,139,.12);color:var(--success);}
+.cm{background:rgba(200,169,110,.12);color:var(--gold);}
+.cl{background:rgba(224,85,85,.12);color:var(--danger);}
+.status-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-family:'DM Mono',monospace;font-size:11px;font-weight:500;}
+.sb-pending{background:rgba(200,169,110,.12);color:var(--gold);}
+.sb-ready{background:rgba(78,202,139,.12);color:var(--success);}
+.actions{display:flex;gap:5px;flex-wrap:wrap;}
+.book-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;transition:all .25s;}
+.book-card:hover{border-color:rgba(200,169,110,.4);transform:translateY(-2px);}
+.bc-icon{font-size:30px;margin-bottom:10px;}
+.bc-title{font-family:'Playfair Display',serif;font-size:15px;font-weight:700;margin-bottom:3px;line-height:1.3;}
+.bc-author{font-size:11px;color:var(--muted);margin-bottom:6px;font-style:italic;}
+.bc-desc{font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.bc-meta{display:flex;align-items:center;gap:8px;margin-bottom:12px;}
+.bc-credits{font-family:'DM Mono',monospace;font-size:22px;color:var(--gold);font-weight:500;}
+.bc-credits span{font-size:12px;color:var(--muted);}
+.bc-actions{display:flex;gap:8px;}
+.search-wrap{position:relative;margin-bottom:22px;}
+.search-wrap input{width:100%;max-width:380px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:11px 16px 11px 42px;color:var(--text);font-size:14px;font-family:'DM Sans',sans-serif;outline:none;transition:border-color .2s;}
+.search-wrap input:focus{border-color:var(--gold);}
+.search-wrap input::placeholder{color:var(--muted);}
+.search-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:14px;pointer-events:none;}
+.overlay{position:fixed;inset:0;background:rgba(12,14,18,.88);display:flex;align-items:center;justify-content:center;z-index:100;backdrop-filter:blur(4px);opacity:0;pointer-events:none;transition:opacity .2s;}
+.overlay.open{opacity:1;pointer-events:all;}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:32px;width:560px;max-width:94vw;transform:translateY(12px);transition:transform .2s;position:relative;max-height:90vh;overflow-y:auto;}
+.overlay.open .modal{transform:translateY(0);}
+.modal-title{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;margin-bottom:5px;}
+.modal-sub{font-size:13px;color:var(--muted);margin-bottom:22px;}
+.form-group{margin-bottom:16px;}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.form-lbl{font-size:11px;color:var(--muted);font-weight:500;margin-bottom:6px;display:block;text-transform:uppercase;letter-spacing:.08em;}
+.form-input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:14px;font-family:'DM Sans',sans-serif;outline:none;transition:border-color .2s;}
+.form-input:focus{border-color:var(--gold);}
+.form-input::placeholder{color:var(--muted);}
+.form-input option{background:var(--surface2);}
+textarea.form-input{resize:vertical;min-height:80px;}
+.modal-footer{display:flex;gap:10px;justify-content:flex-end;margin-top:22px;}
+.modal-x{position:absolute;top:16px;right:16px;background:var(--surface2);border:1px solid var(--border);color:var(--muted);width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:all .2s;}
+.modal-x:hover{color:var(--text);}
+.icon-picker{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;}
+.icon-opt{width:36px;height:36px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:17px;cursor:pointer;transition:all .2s;}
+.icon-opt:hover{border-color:var(--gold);}
+.icon-opt.selected{border-color:var(--gold);background:var(--gold-dim);}
+.section{display:none;}
+.section.active{display:block;}
+.empty{text-align:center;padding:60px 20px;color:var(--muted);}
+.empty-icon{font-size:44px;margin-bottom:14px;opacity:.35;}
+.toasts{position:fixed;bottom:26px;right:26px;z-index:200;display:flex;flex-direction:column;gap:8px;}
+.toast{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:13px 18px;font-size:13px;min-width:230px;box-shadow:0 8px 28px rgba(0,0,0,.45);animation:tIn .25s ease forwards;}
+.toast.ok{border-left:3px solid var(--success);}
+.toast.err{border-left:3px solid var(--danger);}
+@keyframes tIn{from{transform:translateX(18px);opacity:0}to{transform:translateX(0);opacity:1}}
+#loading-bar{position:fixed;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--gold),var(--gold-light),var(--gold));z-index:9999;opacity:0;transition:opacity .2s;animation:loadSlide 1.2s ease-in-out infinite;}
+@keyframes loadSlide{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+.panel-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:22px;margin-bottom:20px;}
+.panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px;flex-wrap:wrap;}
+.panel-title{font-family:'Playfair Display',serif;font-size:24px;font-weight:700;line-height:1.1;}
+.panel-copy{font-size:13px;color:var(--muted);line-height:1.7;max-width:70ch;}
+.btn-row{display:flex;gap:10px;flex-wrap:wrap;}
+
+/* ─── CRÉATEUR PANEL ─── */
+.creator-item{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:12px;transition:border-color .2s;}
+.creator-item:hover{border-color:rgba(200,169,110,.3);}
+.ci-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px;}
+.ci-title{font-family:'Playfair Display',serif;font-size:16px;font-weight:700;}
+.ci-author{font-size:12px;color:var(--muted);font-style:italic;}
+.ci-meta{display:flex;gap:16px;font-size:12px;color:var(--muted);font-family:'DM Mono',monospace;flex-wrap:wrap;}
+.ci-content{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;margin-top:12px;font-size:13px;line-height:1.7;color:var(--text);max-height:220px;overflow-y:auto;white-space:pre-wrap;font-family:'DM Mono',monospace;}
+.ci-actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;}
+
+/* ─── ACCÈS ─── */
+.acces-status{padding:16px;border-radius:12px;text-align:center;font-weight:600;font-size:15px;margin-bottom:20px;}
+.acces-open{background:rgba(78,202,139,.12);border:1px solid rgba(78,202,139,.3);color:var(--success);}
+.acces-closed{background:rgba(224,85,85,.12);border:1px solid rgba(224,85,85,.3);color:var(--danger);}
+
+/* ─── COMMANDES ─── */
+.cmd-row{display:flex;align-items:center;gap:14px;padding:14px 18px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;margin-bottom:8px;flex-wrap:wrap;}
+.cmd-avatar{width:36px;height:36px;border-radius:50%;background:var(--gold-dim);border:1px solid rgba(200,169,110,.3);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--gold);flex-shrink:0;font-family:'Playfair Display',serif;}
+.cmd-info{flex:1;min-width:0;}
+.cmd-name{font-weight:600;font-size:14px;}
+.cmd-detail{font-size:12px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:2px;}
+.cmd-book{font-size:13px;font-weight:500;color:var(--text);}
+.cmd-creneau{font-size:11px;color:var(--gold);font-family:'DM Mono',monospace;margin-top:2px;}
+.cmd-credits{font-family:'DM Mono',monospace;font-size:13px;color:var(--danger);flex-shrink:0;}
+.cmd-actions{display:flex;gap:6px;flex-shrink:0;}
+.cmd-date{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);flex-shrink:0;}
+
+@media(max-width:760px){
+  .grid-4,.grid-3{grid-template-columns:1fr;}
+  .main{padding:28px 20px;}
+  .sidebar{position:relative;height:auto;width:100%;}
+  .layout{flex-direction:column;}
+}
+</style>
+</head>
+<body>
+<div id="loading-bar"></div>
+<div class="layout">
+
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-title">✦ Polio</div>
+      <div class="logo-sub">Panel administrateur</div>
+    </div>
+    <nav class="nav">
+      <div class="nav-item active" data-tab="cartes"><span class="nav-icon">💳</span>Cartes clients</div>
+      <div class="nav-item" data-tab="commandes"><span class="nav-icon">🛒</span>Commandes</div>
+      <div class="nav-item" data-tab="livres"><span class="nav-icon">📚</span>Catalogue livres</div>
+      <div class="nav-item" data-tab="createur"><span class="nav-icon">✍️</span>Espace créateur</div>
+      <div class="nav-item" data-tab="acces"><span class="nav-icon">🔒</span>Accès Site</div>
+    </nav>
+    <div class="sidebar-stats" id="sidebar-stats"></div>
+  </aside>
+
+  <main class="main">
+    <div class="page-title"><span>Polio</span> — Admin</div>
+    <div class="page-sub">Gérez les cartes, commandes, catalogue et accès</div>
+    <div class="grid-4" id="stats-row"></div>
+
+    <!-- ─── CARTES ─── -->
+    <div class="section active" id="section-cartes">
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="search-input" placeholder="Rechercher un client…">
+      </div>
+      <div class="tbl-wrap">
+        <div class="tbl-head">
+          <div><div class="tbl-title">Cartes Clients</div><div class="tbl-sub" id="clients-count"></div></div>
+          <button class="btn btn-gold btn-sm" id="btn-new-client">+ Nouvelle carte</button>
+        </div>
+        <table>
+          <thead><tr><th>Client</th><th>N° Carte</th><th>Crédits</th><th>Dernier achat</th><th>Actions</th></tr></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ─── COMMANDES ─── -->
+    <div class="section" id="section-commandes">
+      <div class="tbl-head" style="padding:0 0 18px;">
+        <div><div class="tbl-title">Toutes les commandes</div><div class="tbl-sub" id="commandes-count"></div></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <select class="form-input" id="cmd-filter-status" style="width:auto;padding:7px 12px;font-size:13px;">
+            <option value="">Tous les statuts</option>
+            <option value="pending">En attente</option>
+            <option value="ready">Prête</option>
+          </select>
+          <select class="form-input" id="cmd-filter-book" style="width:auto;padding:7px 12px;font-size:13px;">
+            <option value="">Tous les livres</option>
+          </select>
+        </div>
+      </div>
+      <div id="commandes-list"></div>
+    </div>
+
+    <!-- ─── LIVRES ─── -->
+    <div class="section" id="section-livres">
+      <div id="books-grid" class="grid-3"></div>
+      <button class="btn btn-gold" id="btn-add-book" style="margin-top:4px">+ Ajouter un livre</button>
+    </div>
+
+    <!-- ─── CRÉATEUR ─── -->
+    <div class="section" id="section-createur">
+      <div class="panel-head">
+        <div>
+          <div class="panel-title">Manuscrits reçus</div>
+          <div class="panel-copy">Les manuscrits envoyés depuis l'espace créateur apparaissent ici. Copiez les infos et validez pour ajouter le livre au catalogue.</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="loadManuscrits()">↻ Actualiser</button>
+      </div>
+      <div id="createur-list"></div>
+    </div>
+
+    <!-- ─── ACCÈS ─── -->
+    <div class="section" id="section-acces">
+      <div class="panel-head">
+        <div>
+          <div class="panel-title">Contrôle d'accès</div>
+          <div class="panel-copy">Ouvrez ou fermez le site client en un clic. L'aperçu se rafraîchit après chaque action.</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="loadAcces()">↻ Actualiser</button>
+      </div>
+      <div style="display:grid;grid-template-columns:minmax(280px,360px) 1fr;gap:20px;align-items:start;">
+        <div class="panel-card">
+          <div id="status-display" class="acces-status">Chargement…</div>
+          <div class="form-group" style="margin-top:16px;">
+            <label class="form-lbl">Message affiché quand le site est fermé</label>
+            <textarea class="form-input" id="closed-message" rows="4" placeholder="Ex: Polio est momentanément fermé. Revenez bientôt."></textarea>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-unban" id="btn-open">🔓 Ouvrir</button>
+            <button class="btn btn-danger" id="btn-close">🔒 Fermer</button>
+          </div>
+          <div style="font-size:11px;color:var(--muted);margin-top:14px;font-family:'DM Mono',monospace;">
+            BDD : table <strong style="color:var(--gold)">site_access</strong> · site_key = <strong style="color:var(--gold)">polio-client</strong>
+          </div>
+        </div>
+        <div class="panel-card" style="padding:16px;">
+          <div style="font-size:12px;color:var(--muted);margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;">
+            <span>Aperçu live — polio-client5.vercel.app</span>
+            <button class="btn btn-ghost btn-sm" onclick="document.getElementById('site-iframe').src=document.getElementById('site-iframe').src">↻</button>
+          </div>
+          <div style="border-radius:12px;overflow:hidden;border:1px solid var(--border);">
+            <div style="background:var(--surface);padding:8px 12px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border);">
+              <div style="display:flex;gap:5px;">
+                <div style="width:10px;height:10px;border-radius:50%;background:#e05555;"></div>
+                <div style="width:10px;height:10px;border-radius:50%;background:#f97316;"></div>
+                <div style="width:10px;height:10px;border-radius:50%;background:#4eca8b;"></div>
+              </div>
+              <div style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;">polio-client5.vercel.app</div>
+            </div>
+            <iframe id="site-iframe" src="https://polio-client5.vercel.app" style="width:100%;height:500px;border:none;display:block;" loading="lazy" title="Aperçu Polio Client"></iframe>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ─── MODALS ─── -->
+<div class="overlay" id="overlay">
+
+  <div class="modal" id="m-add-client" style="display:none">
+    <button class="modal-x" data-close>✕</button>
+    <div class="modal-title">Nouvelle carte client</div>
+    <div class="modal-sub">Créer une carte avec crédits initiaux</div>
+    <div class="form-group"><label class="form-lbl">Nom du client</label><input class="form-input" id="nc-name" placeholder="Ex: Marie Dupont"></div>
+    <div class="form-group"><label class="form-lbl">N° de carte</label><input class="form-input" id="nc-card" placeholder="Ex: 01"></div>
+    <div class="form-group"><label class="form-lbl">Crédits initiaux</label><input class="form-input" type="number" id="nc-credits" placeholder="0" min="0"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" data-close>Annuler</button>
+      <button class="btn btn-gold" id="btn-ok-add-client">Créer la carte</button>
+    </div>
+  </div>
+
+  <div class="modal" id="m-add-credits" style="display:none">
+    <button class="modal-x" data-close>✕</button>
+    <div class="modal-title">Ajouter des crédits</div>
+    <div class="modal-sub" id="mc-sub"></div>
+    <div class="form-group"><label class="form-lbl">Livre à attribuer</label><select class="form-input" id="mc-book"></select></div>
+    <div class="form-group"><label class="form-lbl">Ou montant libre</label><input class="form-input" type="number" id="mc-custom" placeholder="0" min="0"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" data-close>Annuler</button>
+      <button class="btn btn-gold" id="btn-ok-credits">Appliquer</button>
+    </div>
+  </div>
+
+  <div class="modal" id="m-edit-book" style="display:none">
+    <button class="modal-x" data-close>✕</button>
+    <div class="modal-title">✏️ Modifier le livre</div>
+    <div class="modal-sub">Synchronisé avec le site client</div>
+    <input type="hidden" id="eb-id">
+    <div class="form-row">
+      <div class="form-group"><label class="form-lbl">Titre *</label><input class="form-input" id="eb-title" placeholder="Titre du livre"></div>
+      <div class="form-group"><label class="form-lbl">Auteur</label><input class="form-input" id="eb-author" placeholder="Polio Éditions"></div>
+    </div>
+    <div class="form-group"><label class="form-lbl">Description</label><textarea class="form-input" id="eb-desc"></textarea></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-lbl">Crédits requis</label><input class="form-input" type="number" id="eb-credits" min="0"></div>
+      <div class="form-group"><label class="form-lbl">Couleur</label>
+        <select class="form-input" id="eb-color">
+          <option value="cover-elite">Or / Nuit</option>
+          <option value="cover-coming1">Rouge / Sombre</option>
+          <option value="cover-coming2">Bleu / Nuit</option>
+          <option value="cover-coming3">Ambre / Sombre</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group"><label class="form-lbl">Icône</label>
+      <div class="icon-picker" id="eb-icon-picker"></div>
+      <input type="hidden" id="eb-icon">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" data-close>Annuler</button>
+      <button class="btn btn-gold" id="btn-ok-edit-book">💾 Sauvegarder</button>
+    </div>
+  </div>
+
+  <div class="modal" id="m-add-book" style="display:none">
+    <button class="modal-x" data-close>✕</button>
+    <div class="modal-title">📚 Nouveau livre</div>
+    <div class="modal-sub">Apparaît immédiatement sur le site client</div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-lbl">Titre *</label><input class="form-input" id="ab-title" placeholder="Ex: L'Élite de la Force"></div>
+      <div class="form-group"><label class="form-lbl">Auteur</label><input class="form-input" id="ab-author" placeholder="Polio Éditions"></div>
+    </div>
+    <div class="form-group"><label class="form-lbl">Description</label><textarea class="form-input" id="ab-desc" placeholder="Résumé du livre…"></textarea></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-lbl">Crédits requis</label><input class="form-input" type="number" id="ab-credits" placeholder="0" min="0"></div>
+      <div class="form-group"><label class="form-lbl">Couleur</label>
+        <select class="form-input" id="ab-color">
+          <option value="cover-elite">Or / Nuit</option>
+          <option value="cover-coming1">Rouge / Sombre</option>
+          <option value="cover-coming2">Bleu / Nuit</option>
+          <option value="cover-coming3">Ambre / Sombre</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group"><label class="form-lbl">Icône</label>
+      <div class="icon-picker" id="ab-icon-picker"></div>
+      <input type="hidden" id="ab-icon" value="⚔">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" data-close>Annuler</button>
+      <button class="btn btn-gold" id="btn-ok-add-book">✦ Ajouter au catalogue</button>
+    </div>
+  </div>
+
+  <!-- Modal ajouter depuis créateur -->
+  <div class="modal" id="m-creator-book" style="display:none">
+    <button class="modal-x" data-close>✕</button>
+    <div class="modal-title">📚 Valider le manuscrit</div>
+    <div class="modal-sub">Modifier si besoin puis ajouter au catalogue</div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-lbl">Titre *</label><input class="form-input" id="cb-title"></div>
+      <div class="form-group"><label class="form-lbl">Auteur</label><input class="form-input" id="cb-author"></div>
+    </div>
+    <div class="form-group"><label class="form-lbl">Description (résumé pour le catalogue)</label><textarea class="form-input" id="cb-desc" placeholder="Écris un court résumé pour le catalogue…"></textarea></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-lbl">Crédits requis</label><input class="form-input" type="number" id="cb-credits" min="0"></div>
+      <div class="form-group"><label class="form-lbl">Couleur</label>
+        <select class="form-input" id="cb-color">
+          <option value="cover-elite">Or / Nuit</option>
+          <option value="cover-coming1">Rouge / Sombre</option>
+          <option value="cover-coming2">Bleu / Nuit</option>
+          <option value="cover-coming3">Ambre / Sombre</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group"><label class="form-lbl">Icône</label>
+      <div class="icon-picker" id="cb-icon-picker"></div>
+      <input type="hidden" id="cb-icon" value="📖">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" data-close>Annuler</button>
+      <button class="btn btn-gold" id="btn-ok-creator-book">✦ Ajouter au catalogue</button>
+    </div>
+  </div>
+
+  <div class="modal" id="m-confirm" style="display:none">
+    <div class="modal-title" style="font-size:18px;padding-right:10px" id="confirm-txt"></div>
+    <div class="modal-footer" style="margin-top:22px">
+      <button class="btn btn-ghost" data-close>Annuler</button>
+      <button class="btn btn-danger" id="btn-ok-confirm">Confirmer</button>
+    </div>
+  </div>
+
+</div>
+
+<div class="toasts" id="toasts"></div>
+
+<script>
+(function(){
+
+var SB_URL='https://comxzjhzpbwplibkfasw.supabase.co';
+var SB_KEY='sb_publishable_0r8i0ntrXnvOMUomFu9pZA_4cmGf8vp';
+var db=supabase.createClient(SB_URL,SB_KEY);
+
+var books=[],clients=[],commandes=[],manuscrits=[];
+var selCid=null,confirmCb=null;
+
+var ICONS=['⚔','◈','◉','✦','⬡','☽','📖','🌟','🔮','💎','🌙','🔥','🌊','✨','🏹','👑'];
+
+function G(id){return document.getElementById(id);}
+function today(){return new Date().toISOString().split("T")[0];}
+function fmtDate(d){if(!d)return"—";var dt=new Date(d);return dt.toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'});}
+function fmtDateTime(d){if(!d)return"—";var dt=new Date(d);return dt.toLocaleDateString('fr-FR',{day:'2-digit',month:'short'})+' '+dt.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});}
+function creditCls(n){return n>=100?"ch":n>=30?"cm":"cl";}
+function initials(name){return(name||"").split(" ").map(function(w){return w[0]||"";}).join("").toUpperCase().slice(0,2)||"?";}
+function toast(msg,type){var el=document.createElement("div");el.className="toast "+(type||"ok");el.textContent=msg;G("toasts").appendChild(el);setTimeout(function(){el.remove();},3200);}
+function sbErr(err){toast("❌ "+(err?.message||JSON.stringify(err)),"err");console.error(err);}
+function setLoading(on){var el=G("loading-bar");if(el)el.style.opacity=on?"1":"0";}
+
+function buildIconPicker(pickerId,hiddenId,selected){
+  var picker=G(pickerId);picker.innerHTML="";
+  ICONS.forEach(function(ic){
+    var d=document.createElement("div");d.className="icon-opt"+(ic===selected?" selected":"");
+    d.textContent=ic;
+    d.onclick=function(){picker.querySelectorAll(".icon-opt").forEach(function(x){x.classList.remove("selected");});d.classList.add("selected");G(hiddenId).value=ic;};
+    picker.appendChild(d);
+  });
+  G(hiddenId).value=selected||ICONS[0];
+}
+
+// ─── TABS ───
+document.querySelectorAll(".nav-item").forEach(function(item){
+  item.addEventListener("click",function(){
+    document.querySelectorAll(".nav-item").forEach(function(x){x.classList.remove("active");});
+    document.querySelectorAll(".section").forEach(function(x){x.classList.remove("active");});
+    item.classList.add("active");
+    var tab=item.dataset.tab;
+    var sec=G("section-"+tab);
+    if(sec)sec.classList.add("active");
+    if(tab==="commandes")renderCommandes();
+    if(tab==="createur")loadManuscrits();
+    if(tab==="acces")loadAcces();
+  });
+});
+
+// ─── MODALS ───
+function openModal(id){
+  document.querySelectorAll(".modal").forEach(function(m){m.style.display="none";});
+  G(id).style.display="block";
+  G("overlay").classList.add("open");
+}
+function closeModal(){G("overlay").classList.remove("open");}
+document.querySelectorAll("[data-close]").forEach(function(b){b.addEventListener("click",closeModal);});
+G("overlay").addEventListener("click",function(e){if(e.target===G("overlay"))closeModal();});
+
+// ─── LOAD ALL ───
+async function loadAll(){
+  setLoading(true);
+  try {
+    var [rC,rB,rCmd]=await Promise.all([
+      db.from("clients").select("*").order("name"),
+      db.from("books").select("*").order("created_at"),
+      db.from("commandes").select("*").order("created_at",{ascending:false})
+    ]);
+    if(rC.error)throw rC.error;
+    if(rB.error)throw rB.error;
+    clients=rC.data||[];
+    books=rB.data||[];
+    commandes=rCmd.data||[];
+    renderAll();
+  } catch(e){sbErr(e);}
+  setLoading(false);
+}
+
+function renderAll(){renderStats();renderClients();renderBooksGrid();renderCommandes();renderBookFilter();}
+
+// ─── STATS ───
+function renderStats(){
+  var totalCr=clients.reduce(function(a,c){return a+(parseInt(c.credits)||0);},0);
+  var cmdPending=commandes.filter(function(c){return c.status!=='ready';}).length;
+  var cmdReady=commandes.filter(function(c){return c.status==='ready';}).length;
+  G("stats-row").innerHTML=
+    '<div class="stat-card" data-icon="💳"><div class="stat-lbl">Clients</div><div class="stat-num">'+clients.length+'</div><div class="stat-desc">cartes actives</div></div>'+
+    '<div class="stat-card" data-icon="✦"><div class="stat-lbl">Crédits totaux</div><div class="stat-num">'+totalCr+'</div><div class="stat-desc">en circulation</div></div>'+
+    '<div class="stat-card" data-icon="🛒"><div class="stat-lbl">Commandes</div><div class="stat-num">'+commandes.length+'</div><div class="stat-desc">'+cmdPending+' en attente · '+cmdReady+' prêtes</div></div>'+
+    '<div class="stat-card" data-icon="📚"><div class="stat-lbl">Catalogue</div><div class="stat-num">'+books.length+'</div><div class="stat-desc">livres enregistrés</div></div>';
+  G("sidebar-stats").innerHTML='<div class="ss-label">Résumé</div>'+
+    '<div class="ss-row"><span>Clients</span><span class="ss-val">'+clients.length+'</span></div>'+
+    '<div class="ss-row"><span>Commandes</span><span class="ss-val">'+commandes.length+'</span></div>'+
+    '<div class="ss-row"><span>Livres</span><span class="ss-val">'+books.length+'</span></div>';
+}
+
+// ─── CLIENTS ───
+function renderClients(filter){
+  var list=clients.filter(function(c){
+    if(!filter)return true;
+    var q=filter.toLowerCase();
+    return c.name.toLowerCase().includes(q)||(c.card_number||"").toLowerCase().includes(q);
+  });
+  G("clients-count").textContent=list.length+" client"+(list.length>1?"s":"");
+  var rows=list.map(function(c){
+    var cmdCount=commandes.filter(function(o){return o.client_carte===c.card_number;}).length;
+    return '<tr>'+
+      '<td><div style="display:flex;align-items:center;gap:10px"><div style="width:34px;height:34px;border-radius:50%;background:var(--gold-dim);border:1px solid rgba(200,169,110,.3);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--gold);font-family:Playfair Display,serif">'+initials(c.name)+'</div><div><div style="font-weight:600">'+escH(c.name)+'</div><div style="font-size:11px;color:var(--muted)">'+cmdCount+' commande'+(cmdCount>1?'s':'')+'</div></div></div></td>'+
+      '<td><span style="font-family:DM Mono,monospace;font-size:12px">'+escH(c.card_number||"—")+'</span></td>'+
+      '<td><span class="credit-badge '+creditCls(parseInt(c.credits)||0)+'">'+((parseInt(c.credits)||0))+'</span></td>'+
+      '<td style="font-size:13px;color:var(--muted)">'+fmtDate(c.last_purchase)+'</td>'+
+      '<td><div class="actions">'+
+        '<button class="btn btn-ghost btn-sm" onclick="openAddCredits('+c.id+')">+ Crédits</button>'+
+        '<button class="btn btn-danger btn-sm" onclick="deleteClient('+c.id+',\''+escH(c.name)+'\')">Suppr.</button>'+
+      '</div></td></tr>';
+  }).join("");
+  G("tbody").innerHTML=rows||'<tr><td colspan="5" class="empty"><div class="empty-icon">💳</div>Aucun client</td></tr>';
+}
+
+G("search-input").addEventListener("input",function(){renderClients(this.value);});
+
+function escH(s){return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");}
+
+// ─── COMMANDES ───
+function renderBookFilter(){
+  var sel=G("cmd-filter-book");
+  sel.innerHTML='<option value="">Tous les livres</option>';
+  books.forEach(function(b){sel.innerHTML+='<option value="'+b.id+'">'+escH(b.title)+'</option>';});
+}
+
+function renderCommandes(){
+  var statusFilter=G("cmd-filter-status").value;
+  var bookFilter=G("cmd-filter-book").value;
+  var list=commandes.filter(function(c){
+    if(statusFilter==="pending"&&c.status==="ready")return false;
+    if(statusFilter==="ready"&&c.status!=="ready")return false;
+    if(bookFilter&&String(c.book_id)!==bookFilter)return false;
+    return true;
+  });
+  G("commandes-count").textContent=list.length+" commande"+(list.length>1?"s":"");
+  if(!list.length){
+    G("commandes-list").innerHTML='<div class="empty"><div class="empty-icon">🛒</div>Aucune commande</div>';
+    return;
+  }
+  G("commandes-list").innerHTML=list.map(function(c){
+    var isReady=c.status==="ready";
+    var livBadge=c.livraison?'<span style="font-size:11px;color:var(--ban);font-family:DM Mono,monospace">📦 Livraison</span>':'<span style="font-size:11px;color:var(--muted);font-family:DM Mono,monospace">🏪 Retrait</span>';
+    return '<div class="cmd-row">'+
+      '<div class="cmd-avatar">'+initials(c.client_nom||"?")+'</div>'+
+      '<div class="cmd-info">'+
+        '<div class="cmd-name">'+escH(c.client_nom||"—")+'<span style="font-family:DM Mono,monospace;font-size:11px;color:var(--muted);margin-left:8px">#'+escH(c.client_carte||"—")+'</span></div>'+
+        '<div class="cmd-book">📖 '+escH(c.book_titre||"—")+'</div>'+
+        '<div class="cmd-creneau">'+(c.creneau_label?'🗓 '+escH(c.creneau_label):'')+'&nbsp;&nbsp;'+livBadge+'</div>'+
+        '<div style="font-size:11px;color:var(--muted);margin-top:2px">'+(c.contact_info?'📬 '+escH(c.contact_info):'')+'</div>'+
+      '</div>'+
+      '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">'+
+        '<span class="status-badge '+(isReady?"sb-ready":"sb-pending")+'">'+(isReady?"✓ Prête":"⏳ En attente")+'</span>'+
+        '<span class="cmd-credits">−'+c.credits_debites+' cr.</span>'+
+        '<span class="cmd-date">'+fmtDateTime(c.created_at)+'</span>'+
+      '</div>'+
+      '<div class="cmd-actions">'+
+        (isReady
+          ? '<button class="btn btn-ghost btn-sm" onclick="setCommandeStatus('+c.id+',\'pending\')">↩ Annuler</button>'
+          : '<button class="btn btn-ready btn-sm" onclick="setCommandeStatus('+c.id+',\'ready\')">✓ Marquer prête</button>'
+        )+
+        '<button class="btn btn-danger btn-sm" onclick="deleteCommande('+c.id+')">Suppr.</button>'+
+      '</div>'+
+    '</div>';
+  }).join("");
+}
+
+G("cmd-filter-status").addEventListener("change",renderCommandes);
+G("cmd-filter-book").addEventListener("change",renderCommandes);
+
+async function setCommandeStatus(id,status){
+  setLoading(true);
+  var r=await db.from("commandes").update({status:status}).eq("id",id);
+  if(r.error){sbErr(r.error);setLoading(false);return;}
+  var c=commandes.find(function(x){return x.id===id;});
+  if(c)c.status=status;
+  renderCommandes();renderStats();
+  toast(status==="ready"?"✓ Commande marquée prête":"↩ Statut réinitialisé","ok");
+  setLoading(false);
+}
+
+async function deleteCommande(id){
+  if(!confirm("Supprimer cette commande ?"))return;
+  setLoading(true);
+  var r=await db.from("commandes").delete().eq("id",id);
+  if(r.error){sbErr(r.error);setLoading(false);return;}
+  commandes=commandes.filter(function(x){return x.id!==id;});
+  renderCommandes();renderStats();
+  toast("Commande supprimée","ok");
+  setLoading(false);
+}
+
+// ─── LIVRES ───
+function renderBooksGrid(){
+  var COLORS={'cover-elite':'#c8a96e','cover-coming1':'#c05050','cover-coming2':'#4a7aaa','cover-coming3':'#b8853a'};
+  G("books-grid").innerHTML=books.map(function(b){
+    return '<div class="book-card">'+
+      '<div class="bc-icon">'+escH(b.icon||"📖")+'</div>'+
+      '<div class="bc-title">'+escH(b.title)+'</div>'+
+      '<div class="bc-author">'+escH(b.author||"Polio Éditions")+'</div>'+
+      '<div class="bc-desc">'+escH(b.description||"—")+'</div>'+
+      '<div class="bc-meta"><span class="bc-credits">'+b.credits+'<span> cr</span></span>'+
+        '<span style="width:10px;height:10px;border-radius:50%;background:'+(COLORS[b.color]||"#888")+';display:inline-block"></span>'+
+        '<span style="font-size:11px;color:var(--muted)">'+escH(b.color||"—")+'</span>'+
+      '</div>'+
+      '<div class="bc-actions">'+
+        '<button class="btn btn-ghost btn-sm" onclick="openEditBook('+b.id+')">✏️ Modifier</button>'+
+        '<button class="btn btn-danger btn-sm" onclick="deleteBook('+b.id+',\''+escH(b.title)+'\')">Suppr.</button>'+
+      '</div></div>';
+  }).join("")||'<div class="empty"><div class="empty-icon">📚</div>Aucun livre</div>';
+}
+
+// ─── ESPACE CRÉATEUR ───
+async function loadManuscrits(){
+  setLoading(true);
+  try {
+    var r=await db.from("manuscrits").select("*").order("created_at",{ascending:false});
+    if(r.error)throw r.error;
+    manuscrits=r.data||[];
+    renderManuscrits();
+  } catch(e){
+    // Table peut ne pas exister encore
+    G("createur-list").innerHTML='<div class="empty"><div class="empty-icon">✍️</div><div>Aucun manuscrit reçu pour l\'instant.<br><span style="font-size:12px;color:var(--muted)">Les manuscrits envoyés depuis l\'espace créateur apparaîtront ici.</span></div></div>';
+  }
+  setLoading(false);
+}
+
+function renderManuscrits(){
+  if(!manuscrits.length){
+    G("createur-list").innerHTML='<div class="empty"><div class="empty-icon">✍️</div>Aucun manuscrit reçu</div>';
+    return;
+  }
+  G("createur-list").innerHTML=manuscrits.map(function(m){
+    var alreadyAdded=books.some(function(b){return b.title===m.title&&b.author===m.author;});
+    return '<div class="creator-item">'+
+      '<div class="ci-head">'+
+        '<div>'+
+          '<div class="ci-title">'+escH(m.title||"Sans titre")+'</div>'+
+          '<div class="ci-author">par '+escH(m.author||"—")+' · carte '+escH(m.card_number||"—")+'</div>'+
+        '</div>'+
+        (alreadyAdded
+          ? '<span class="status-badge sb-ready">✓ Dans le catalogue</span>'
+          : '<span class="status-badge sb-pending">⏳ En attente</span>'
+        )+
+      '</div>'+
+      '<div class="ci-meta">'+
+        '<span>📝 '+escH(String(m.words||0))+' mots</span>'+
+        '<span>📄 '+escH(String(m.pages||0))+' pages</span>'+
+        '<span>📑 '+escH(String(m.chapters_count||0))+' chapitres</span>'+
+        '<span>💰 '+escH(String(m.price_credits||0))+' crédits suggérés</span>'+
+        '<span style="color:var(--muted)">'+fmtDateTime(m.created_at)+'</span>'+
+      '</div>'+
+      (m.content_preview?'<div class="ci-content">'+escH(m.content_preview)+'</div>':'')+
+      '<div class="ci-actions">'+
+        (!alreadyAdded?'<button class="btn btn-gold btn-sm" onclick="openCreatorBookModal('+m.id+')">✦ Ajouter au catalogue</button>':'')+
+        '<button class="btn btn-danger btn-sm" onclick="deleteManuscrit('+m.id+')">Supprimer</button>'+
+      '</div>'+
+    '</div>';
+  }).join("");
+}
+
+function openCreatorBookModal(mid){
+  var m=manuscrits.find(function(x){return x.id===mid;});
+  if(!m)return;
+  G("cb-title").value=m.title||"";
+  G("cb-author").value=m.author||"";
+  G("cb-desc").value=m.description||"";
+  G("cb-credits").value=m.price_credits||250;
+  G("cb-color").value="cover-elite";
+  buildIconPicker("cb-icon-picker","cb-icon","📖");
+  G("btn-ok-creator-book").onclick=function(){addBookFromCreator(m);};
+  openModal("m-creator-book");
+}
+
+async function addBookFromCreator(m){
+  var title=G("cb-title").value.trim(),author=G("cb-author").value.trim()||"Polio Éditions";
+  var desc=G("cb-desc").value.trim(),credits=parseInt(G("cb-credits").value)||250;
+  var color=G("cb-color").value,icon=G("cb-icon").value||"📖";
+  if(!title){toast("Entrez un titre","err");return;}
+  setLoading(true);
+  var r=await db.from("books").insert([{title:title,author:author,description:desc,credits:String(credits),color:color,icon:icon}]).select().single();
+  if(r.error){sbErr(r.error);setLoading(false);return;}
+  books.push({id:r.data.id,title:title,author:author,description:desc,credits:credits,icon:icon,color:color});
+  // Marquer le manuscrit comme traité
+  await db.from("manuscrits").update({status:"published"}).eq("id",m.id);
+  closeModal();renderAll();loadManuscrits();
+  toast("📚 "+title+" ajouté au catalogue","ok");
+  setLoading(false);
+}
+
+async function deleteManuscrit(id){
+  if(!confirm("Supprimer ce manuscrit ?"))return;
+  setLoading(true);
+  await db.from("manuscrits").delete().eq("id",id);
+  manuscrits=manuscrits.filter(function(x){return x.id!==id;});
+  renderManuscrits();
+  toast("Manuscrit supprimé","ok");
+  setLoading(false);
+}
+
+// ─── ACCÈS SITE ───
+async function loadAcces(){
+  setLoading(true);
+  try {
+    var r=await db.from("site_access").select("*").eq("site_key","polio-client").limit(1);
+    if(r.error)throw r.error;
+    var d=r.data&&r.data[0];
+    updateAccesUI(d||{is_open:true,closed_message:""});
+  } catch(e){
+    G("status-display").textContent="Impossible de charger le statut";
+  }
+  setLoading(false);
+}
+
+function updateAccesUI(d){
+  var isOpen=!d||d.is_open!==false;
+  var disp=G("status-display");
+  disp.className="acces-status "+(isOpen?"acces-open":"acces-closed");
+  disp.textContent=isOpen?"🟢 Site client OUVERT — accessible au public":"🔴 Site client FERMÉ — accès bloqué";
+  if(d&&d.closed_message)G("closed-message").value=d.closed_message;
+}
+
+async function setAcces(isOpen){
+  setLoading(true);
+  var msg=G("closed-message").value.trim()||"Polio Client est momentanément fermé. Revenez bientôt.";
+  var payload={site_key:"polio-client",is_open:isOpen,closed_message:msg};
+  var r=await db.from("site_access").upsert([payload],{onConflict:"site_key"}).select().single();
+  if(r.error){sbErr(r.error);setLoading(false);return;}
+  updateAccesUI(r.data);
+  // Rafraîchir l'iframe après un court délai
+  setTimeout(function(){
+    var iframe=G("site-iframe");
+    if(iframe)iframe.src=iframe.src;
+  },1200);
+  toast(isOpen?"🔓 Site client ouvert":"🔒 Site client fermé",isOpen?"ok":"err");
+  setLoading(false);
+}
+
+G("btn-open").addEventListener("click",function(){setAcces(true);});
+G("btn-close").addEventListener("click",function(){setAcces(false);});
+
+// ─── ADD CREDITS ───
+function openAddCredits(cid){
+  selCid=cid;
+  var c=clients.find(function(x){return x.id===cid;});
+  G("mc-sub").textContent="Client : "+c.name+" — "+c.credits+" crédits";
+  var opts=books.map(function(b){return'<option value="'+b.credits+'">'+escH(b.title)+' ('+b.credits+' cr.)</option>';}).join("");
+  G("mc-book").innerHTML='<option value="">— Choisir un livre —</option>'+opts;
+  G("mc-custom").value="";
+  openModal("m-add-credits");
+}
+
+G("btn-ok-credits").addEventListener("click",function(){
+  var amount=parseInt(G("mc-book").value)||parseInt(G("mc-custom").value)||0;
+  if(!amount){toast("Choisissez un livre ou entrez un montant","err");return;}
+  var c=clients.find(function(x){return x.id===selCid;});
+  var newCredits=c.credits+amount;
+  setLoading(true);
+  db.from("clients").update({credits:newCredits,last_purchase:today()}).eq("id",c.id)
+  .then(function(r){
+    if(r.error){sbErr(r.error);setLoading(false);return;}
+    c.credits=newCredits;closeModal();renderAll();
+    toast("✦ +"+amount+" crédits → "+c.name,"ok");setLoading(false);
+  });
+});
+
+// ─── ADD CLIENT ───
+G("btn-new-client").addEventListener("click",function(){
+  G("nc-name").value="";G("nc-card").value="";G("nc-credits").value="";
+  openModal("m-add-client");
+});
+
+G("btn-ok-add-client").addEventListener("click",function(){
+  var name=G("nc-name").value.trim(),card=G("nc-card").value.trim();
+  var credits=parseInt(G("nc-credits").value)||0;
+  if(!name||!card){toast("Nom et numéro requis","err");return;}
+  setLoading(true);
+  db.from("clients").insert([{name:name,card_number:card,credits:credits,last_purchase:today()}]).select().single()
+  .then(function(r){
+    if(r.error){sbErr(r.error);setLoading(false);return;}
+    clients.push({id:r.data.id,name:name,card_number:card,credits:credits,last_purchase:today()});
+    closeModal();renderAll();toast("✦ Carte créée pour "+name,"ok");setLoading(false);
+  });
+});
+
+// ─── DELETE CLIENT ───
+async function deleteClient(id,name){
+  if(!confirm("Supprimer "+name+" ?"))return;
+  setLoading(true);
+  var r=await db.from("clients").delete().eq("id",id);
+  if(r.error){sbErr(r.error);setLoading(false);return;}
+  clients=clients.filter(function(x){return x.id!==id;});
+  renderAll();toast("Client supprimé","ok");setLoading(false);
+}
+
+// ─── EDIT BOOK ───
+function openEditBook(id){
+  var b=books.find(function(x){return x.id===id;});
+  if(!b)return;
+  G("eb-id").value=b.id;G("eb-title").value=b.title;G("eb-author").value=b.author||"";
+  G("eb-desc").value=b.description||"";G("eb-credits").value=b.credits||0;G("eb-color").value=b.color||"cover-elite";
+  buildIconPicker("eb-icon-picker","eb-icon",b.icon||"⚔");
+  openModal("m-edit-book");
+}
+
+G("btn-ok-edit-book").addEventListener("click",function(){
+  var id=parseInt(G("eb-id").value);
+  var title=G("eb-title").value.trim(),author=G("eb-author").value.trim()||"Polio Éditions";
+  var desc=G("eb-desc").value.trim(),credits=parseInt(G("eb-credits").value)||0;
+  var color=G("eb-color").value,icon=G("eb-icon").value||"⚔";
+  if(!title){toast("Entrez un titre","err");return;}
+  setLoading(true);
+  db.from("books").update({title:title,author:author,description:desc,credits:String(credits),color:color,icon:icon}).eq("id",id)
+  .then(function(r){
+    if(r.error){sbErr(r.error);setLoading(false);return;}
+    var b=books.find(function(x){return x.id===id;});
+    Object.assign(b,{title,author,description:desc,credits,color,icon});
+    closeModal();renderAll();toast("✅ Livre modifié","ok");setLoading(false);
+  });
+});
+
+// ─── ADD BOOK ───
+G("btn-add-book").addEventListener("click",function(){
+  G("ab-title").value="";G("ab-author").value="";G("ab-desc").value="";G("ab-credits").value="";G("ab-color").value="cover-elite";
+  buildIconPicker("ab-icon-picker","ab-icon","⚔");
+  openModal("m-add-book");
+});
+
+G("btn-ok-add-book").addEventListener("click",function(){
+  var title=G("ab-title").value.trim(),author=G("ab-author").value.trim()||"Polio Éditions";
+  var desc=G("ab-desc").value.trim(),credits=parseInt(G("ab-credits").value)||0;
+  var color=G("ab-color").value,icon=G("ab-icon").value||"⚔";
+  if(!title){toast("Entrez un titre","err");return;}
+  setLoading(true);
+  db.from("books").insert([{title:title,author:author,description:desc,credits:String(credits),color:color,icon:icon}]).select().single()
+  .then(function(r){
+    if(r.error){sbErr(r.error);setLoading(false);return;}
+    books.push({id:r.data.id,title,author,description:desc,credits,icon,color});
+    closeModal();renderAll();toast("📚 "+title+" ajouté","ok");setLoading(false);
+  });
+});
+
+// ─── DELETE BOOK ───
+async function deleteBook(id,title){
+  if(!confirm("Supprimer « "+title+" » du catalogue ?"))return;
+  setLoading(true);
+  var r=await db.from("books").delete().eq("id",id);
+  if(r.error){sbErr(r.error);setLoading(false);return;}
+  books=books.filter(function(x){return x.id!==id;});
+  renderAll();toast("Livre supprimé","ok");setLoading(false);
+}
+
+loadAll();
+})();
+</script>
+</body>
+</html>
